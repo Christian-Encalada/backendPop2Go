@@ -1,0 +1,174 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Esta es mi base de datos actual:
+
+-- ===========================================
+-- SCRIPT SQL COMPLETO - BASE DE DATOS POP2GO
+-- Incluye entidades principales + reportes
+-- Arquitectura backend: Nest.js + PostgreSQL
+-- ===========================================
+
+-- TABLA: tbl_ciudades (renombrada y actualizada)
+-- Centraliza los nombres de las ciudades para consistencia
+CREATE TABLE tbl_ciudades (
+    id_ciudad SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE tbl_usuarios (
+    tbl_id_usuario SERIAL PRIMARY KEY,
+    tbl_nombre VARCHAR(100) NOT NULL,
+    tbl_correo VARCHAR(100) UNIQUE NOT NULL,
+    tbl_contrasena TEXT NOT NULL,
+    tbl_telefono VARCHAR(20),
+    tbl_fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id_ciudad INTEGER REFERENCES tbl_ciudades(id_ciudad) -- Ciudad principal del usuario
+);
+
+-- =====================================
+-- TABLA: tbl_roles
+-- =====================================
+CREATE TABLE tbl_roles (
+    tbl_id_rol SERIAL PRIMARY KEY,
+    tbl_nombre VARCHAR(50) UNIQUE NOT NULL -- 'cliente', 'repartidor', 'admin', 'superadmin'
+);
+
+-- =====================================
+-- TABLA: tbl_usuario_roles (relación muchos a muchos)
+-- =====================================
+CREATE TABLE tbl_usuario_roles (
+    tbl_id_usuario INTEGER REFERENCES tbl_usuarios(tbl_id_usuario),
+    tbl_id_rol INTEGER REFERENCES tbl_roles(tbl_id_rol),
+    PRIMARY KEY (tbl_id_usuario, tbl_id_rol)
+);
+
+-- =====================================
+-- TABLA: tbl_productos
+-- =====================================
+CREATE TABLE tbl_productos (
+    tbl_id_producto SERIAL PRIMARY KEY,
+    tbl_nombre VARCHAR(100) NOT NULL,
+    tbl_descripcion TEXT,
+    tbl_precio DECIMAL(10,2) NOT NULL,
+    tbl_stock INTEGER NOT NULL,
+    tbl_activo BOOLEAN DEFAULT TRUE
+);
+
+-- =====================================
+-- TABLA: tbl_direcciones
+-- =====================================
+CREATE TABLE tbl_direcciones (
+    tbl_id_direccion SERIAL PRIMARY KEY,
+    tbl_id_usuario INTEGER REFERENCES tbl_usuarios(tbl_id_usuario) ON DELETE CASCADE,
+    tbl_direccion TEXT NOT NULL,
+    id_ciudad INTEGER REFERENCES tbl_ciudades(id_ciudad),
+    tbl_referencia TEXT
+);
+
+-- =====================================
+-- TABLA: tbl_pedidos
+-- =====================================
+CREATE TABLE tbl_pedidos (
+    tbl_id_pedido SERIAL PRIMARY KEY,
+    tbl_id_usuario INTEGER REFERENCES tbl_usuarios(tbl_id_usuario),
+    tbl_id_direccion INTEGER REFERENCES tbl_direcciones(tbl_id_direccion),
+    tbl_fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tbl_estado VARCHAR(30) CHECK (tbl_estado IN ('pendiente', 'en_camino', 'entregado', 'cancelado')),
+    tbl_total DECIMAL(10,2) NOT NULL,
+    tbl_tiempo_entrega INTERVAL,
+    tbl_id_repartidor INTEGER REFERENCES tbl_usuarios(tbl_id_usuario)
+);
+
+-- =====================================
+-- TABLA: tbl_carrito_productos
+-- =====================================
+CREATE TABLE tbl_carrito_productos (
+    tbl_id_carrito SERIAL PRIMARY KEY,
+    tbl_id_pedido INTEGER REFERENCES tbl_pedidos(tbl_id_pedido),
+    tbl_id_producto INTEGER REFERENCES tbl_productos(tbl_id_producto),
+    tbl_cantidad INTEGER NOT NULL,
+    tbl_precio_unitario DECIMAL(10,2) NOT NULL
+);
+
+-- =====================================
+-- TABLA: tbl_cupones
+-- =====================================
+CREATE TABLE tbl_cupones (
+    tbl_id_cupon SERIAL PRIMARY KEY,
+    tbl_codigo VARCHAR(20) UNIQUE NOT NULL,
+    tbl_descuento DECIMAL(5,2),
+    tbl_fecha_expiracion DATE
+);
+
+-- =====================================
+-- TABLA: tbl_uso_cupones
+-- =====================================
+CREATE TABLE tbl_uso_cupones (
+    tbl_id_uso SERIAL PRIMARY KEY,
+    tbl_id_pedido INTEGER REFERENCES tbl_pedidos(tbl_id_pedido),
+    tbl_id_cupon INTEGER REFERENCES tbl_cupones(tbl_id_cupon),
+    tbl_fecha_uso TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================
+-- TABLA: tbl_reportes_ventas
+-- =====================================
+CREATE TABLE tbl_reportes_ventas (
+    tbl_id_reporte SERIAL PRIMARY KEY,
+    tbl_fecha_reporte DATE NOT NULL,
+    id_ciudad INTEGER REFERENCES tbl_ciudades(id_ciudad),
+    tbl_total_pedidos INTEGER,
+    tbl_total_ingresos DECIMAL(10,2),
+    tbl_pedidos_entregados INTEGER,
+    tbl_pedidos_cancelados INTEGER,
+    tbl_promedio_tiempo_entrega INTERVAL
+);
+
+-- =====================================
+-- TABLA: tbl_metricas_repartidores
+-- =====================================
+CREATE TABLE tbl_metricas_repartidores (
+    tbl_id_metricas SERIAL PRIMARY KEY,
+    tbl_id_repartidor INTEGER REFERENCES tbl_usuarios(tbl_id_usuario),
+    tbl_fecha DATE,
+    tbl_total_entregas INTEGER,
+    tbl_promedio_tiempo_entrega INTERVAL,
+    tbl_kilometros_recorridos DECIMAL(10,2),
+    id_ciudad INTEGER REFERENCES tbl_ciudades(id_ciudad)
+);
+
+-- =====================================
+-- BUENAS PRÁCTICAS A NIVEL DE CÓDIGO
+-- =====================================
+-- 1. Nest.js debe tener un cronjob diario que:
+--    - Calcule los totales de ventas por ciudad
+--    - Calcule desempeño de repartidores
+--    - Inserte en las tablas de métricas/reportes
+
+-- 2. JWT debe incluir el rol y ciudad del usuario para hacer filtros correctos en los endpoints
+
+-- 3. Los endpoints protegidos deben validar:
+--    - Si es admin: solo acceder a su ciudad
+--    - Si es superadmin: puede acceder a todas
+
+-- 4. Los reportes pueden generarse desde SQL con:
+--    - Agrupaciones por ciudad y fecha
+--    - Vistas o funciones SQL si deseas ahorrar lógica en el backend
+
+-- 5. Puedes usar una librería de gráficas en React Native para mostrar datos del backend:
+--    - Recharts, Victory Native, Chart Kit, etc.
+
+-- 6. Para el sistema de roles dinámicos:
+--    - Cada vez que crees un usuario, asigna sus roles con INSERT en tbl_usuario_roles
+--    - En el backend, recupera los roles del usuario con JOIN para validar permisos
+
+-- =====================================
+-- Este script está optimizado para Postgres 13+.
+-- Puedes migrar fácilmente con herramientas como TypeORM o Prisma.
+-- =====================================
+
+
+

@@ -1,0 +1,114 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Esta es mi arquitectura actual a seguir:
+
+
+### ⚙️ Tecnologías Principales
+
+| Componente | Tecnología |
+| --- | --- |
+| App (Web + Móvil) | React Native (Expo) |
+| Backend API | Nest.js (Node.js + Express) |
+| Base de Datos | PostgreSQL |
+| Servicios externos | Stripe, Google Maps, Push Notifications |
+| IDE | Cursor |
+
+### 🧠 Arquitectura General
+
+**Modelo usado:** Arquitectura **Cliente-Servidor**
+
+**Patrón interno:** **Arquitectura en Capas** (Layered Architecture)
+
+### 🏗️ Esquema Arquitectónico
+
+```
+┌─────────────────────────────┐
+│     Aplicación (App)        │ ← React Native + Expo
+│  - Interfaces por rol       │
+│    • Cliente                │
+│    • Repartidor             │
+│    • Administrador          │
+│  - Lógica de UI             │
+│  - Consumo de API REST      │
+│  - Gestión de Estado (Redux)│
+└────────────▲────────────────┘
+             │ HTTP REST (JWT Auth, Rate Limiting)
+┌────────────┴───────────────┐
+│          Backend           │ ← Nest.js
+│  - Controladores (Rutas)   │
+│  - Servicios (Lógica Negocio, Transacciones)
+│  - Repositorios (TypeORM/Prisma)
+│  - Middleware (Auth, Logs) │
+│  - Autenticación JWT       │
+│  - Módulos para integración (Pagos, Mapas, Notificaciones)
+│  - Cron Jobs (para reportes)
+└────────────▲───────────────┘
+             │ SQL (Conexión Pool, Transacciones)
+┌────────────┴───────────────┐
+│       Base de Datos        │ ← PostgreSQL (Optimizada con Índices, Claves Foráneas)
+│  - Usuarios (roles, auth)  │
+│  - Productos (categorías)  │
+│  - Pedidos (items, estado) │
+│  - Direcciones             │
+│  - Cupones (uso)           │
+│  - Ciudades (Normalizada)  │
+│  - Reportes y Métricas (Precalculados)
+│  - Calificaciones (Opcional)
+└────────────────────────────┘
+             │
+   ┌─────────┴────────────────────────────────────────────────────────┐
+   │   Servicios Externos                                             │
+   │   - Stripe (pagos)                                               │
+   │   - Google Maps (Geolocalización, Rutas)                         │
+   │   - Push Notifications (Expo Push Notifications/Firebase)        │
+   │   - Servicio de Email (Opcional: confirmaciones)                 │
+   └──────────────────────────────────────────────────────────────────┘                                         
+
+```
+
+### 🧱 Patrón de Capas en el Backend (Nest.js)
+
+| Capa | Función |
+| --- | --- |
+| **Controller** | Recibe las peticiones HTTP y llama a los servicios adecuados |
+| **Service** | Contiene la lógica de negocio del sistema |
+| **Repository** | Se comunica con la base de datos a través de ORM (ej: Prisma o TypeORM) |
+| **DTOs** | Gestiona la validación de datos de entrada y salida |
+| **Middleware** | Intercepta y modifica peticiones/respuestas (ej: auth, logs, etc.) |
+
+---
+
+# Resumen de Arquitectura y Patrones para Pop2Go
+
+| Capa / Área | Arquitectura / Patrón | Descripción breve |
+| --- | --- | --- |
+| Arquitectura general | **Cliente-Servidor** | Separación entre frontend (cliente) y backend (servidor). |
+| Backend | **Arquitectura en capas (Layered)** | División en capas: controlador, servicios, repositorios, base de datos. Facilita mantenimiento y escalabilidad. |
+| Frontend | **Patrón basado en Componentes** | React con componentes funcionales, Hooks, organización por features/dominios. |
+
+### 👥 Tipos de Usuario y Funcionalidades
+
+| Rol | Funciones principales |
+| --- | --- |
+| **Cliente** | Comprar productos, elegir ciudad, pagar con tarjeta (Stripe), ver pedidos |
+| **Repartidor** | Recibir pedidos asignados, ver ubicaciones en mapa, confirmar entregas |
+| **Administrador** | Gestionar productos, ciudad, repartidores y ver métricas de su ciudad |
+| **Super Administrador** | Gestionar productos, ciudades, repartidores y ver métricas |
+
+---
+
+### 🔐 Seguridad
+
+- **JWT (JSON Web Token):** Para autenticar usuarios y mantener sesiones seguras.
+- **Roles y permisos:** Acceso restringido según el tipo de usuario.
+
+---
+
+### 🧾 Estado y Próximos pasos
+
+- ✅ Fase actual: Sprint 1 – Diseño de requisitos, arquitectura y base de datos
+
+- ⏳ Duración estimada: 3 meses (máximo 4)
