@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -23,7 +23,7 @@ export class AuthService {
 
   // Registrar nuevo usuario
   async register(registerDto: RegisterDto) {
-    const { email, password, name, phone, cityId } = registerDto;
+    const { email, password, name, phone, cityId, roles = ['cliente'] } = registerDto;
 
     // Verificar si el usuario ya existe
     const existingUser = await this.usersRepository.findOne({
@@ -34,6 +34,15 @@ export class AuthService {
       throw new UnauthorizedException('El correo ya está registrado');
     }
 
+    // Buscar los roles en la base de datos
+    const userRoles = await this.roleRepository.find({
+      where: roles.map(roleName => ({ nombre: roleName }))
+    });
+
+    if (userRoles.length === 0) {
+      throw new NotFoundException('No se encontraron los roles especificados. Asegúrate de que existan en la base de datos.');
+    }
+
     // Crear nuevo usuario
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = this.usersRepository.create({
@@ -42,6 +51,7 @@ export class AuthService {
       nombre: name,
       telefono: phone,
       id_ciudad: cityId,
+      roles: userRoles, // Asignar roles al usuario
     });
 
     await this.usersRepository.save(newUser);
@@ -51,7 +61,7 @@ export class AuthService {
       sub: newUser.id_usuario,
       email: newUser.correo,
       name: newUser.nombre,
-      roles: ['cliente'], // Por defecto, los nuevos usuarios son clientes
+      roles: userRoles.map(role => role.nombre), // Usar los roles asignados
       cityId: newUser.id_ciudad,
     };
 
@@ -61,7 +71,7 @@ export class AuthService {
         id: newUser.id_usuario,
         name: newUser.nombre,
         email: newUser.correo,
-        roles: ['cliente'],
+        roles: userRoles.map(role => role.nombre),
       },
     };
   }
