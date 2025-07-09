@@ -8,22 +8,22 @@ import { OrderItem } from '../../orders/entities/order-item.entity';
 @Entity('tbl_productos')
 export class Product {
   @PrimaryGeneratedColumn()
-  tbl_id_producto: number;
+  id_producto: number;
 
   @Column({ length: 100 })
-  tbl_nombre: string;
+  nombre: string;
 
   @Column('text', { nullable: true })
-  tbl_descripcion: string;
+  descripcion: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  tbl_precio: number;
+  precio: number;
 
   @Column()
-  tbl_stock: number;
+  stock: number;
 
   @Column({ default: true })
-  tbl_activo: boolean;
+  activo: boolean;
 
   // Relaciones
   @OneToMany(() => OrderItem, orderItem => orderItem.product)

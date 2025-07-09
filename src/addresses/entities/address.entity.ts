@@ -10,21 +10,21 @@ import { Order } from '../../orders/entities/order.entity';
 @Entity('tbl_direcciones')
 export class Address {
   @PrimaryGeneratedColumn()
-  tbl_id_direccion: number;
+  id_direccion: number;
 
   @Column('text')
-  tbl_direccion: string;
+  direccion: string;
 
   @Column('text', { nullable: true })
-  tbl_referencia: string;
+  referencia: string;
 
   // Relaciones
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'tbl_id_usuario' })
+  @JoinColumn({ name: 'id_usuario' })
   user: User;
 
   @Column()
-  tbl_id_usuario: number;
+  id_usuario: number;
 
   @ManyToOne(() => City)
   @JoinColumn({ name: 'id_ciudad' })

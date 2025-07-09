@@ -39,10 +39,10 @@ export class OrdersService {
     try {
       // Crear el pedido
       const newOrder = this.orderRepository.create({
-        tbl_id_usuario: userId,
-        tbl_id_direccion: createOrderDto.tbl_id_direccion,
-        tbl_estado: 'pendiente',
-        tbl_total: 0, // Se calculará después
+        id_usuario: userId,
+        id_direccion: createOrderDto.id_direccion,
+        estado: 'pendiente',
+        total: 0, // Se calculará después
       });
       
       const savedOrder = await queryRunner.manager.save(newOrder);
@@ -52,35 +52,35 @@ export class OrdersService {
       // Crear los items del pedido
       for (const item of createOrderDto.productos) {
         // Obtener producto
-        const producto = await this.productsService.findOne(item.tbl_id_producto);
+        const producto = await this.productsService.findOne(item.id_producto);
         
-        if (!producto.tbl_activo) {
-          throw new BadRequestException(`El producto ${producto.tbl_nombre} no está activo`);
+        if (!producto.activo) {
+          throw new BadRequestException(`El producto ${producto.nombre} no está activo`);
         }
         
-        if (producto.tbl_stock < item.tbl_cantidad) {
-          throw new BadRequestException(`No hay suficiente stock del producto ${producto.tbl_nombre}`);
+        if (producto.stock < item.cantidad) {
+          throw new BadRequestException(`No hay suficiente stock del producto ${producto.nombre}`);
         }
         
         // Crear item del pedido
         const orderItem = this.orderItemRepository.create({
-          tbl_id_pedido: savedOrder.tbl_id_pedido,
-          tbl_id_producto: item.tbl_id_producto,
-          tbl_cantidad: item.tbl_cantidad,
-          tbl_precio_unitario: producto.tbl_precio,
+          id_pedido: savedOrder.id_pedido,
+          id_producto: item.id_producto,
+          cantidad: item.cantidad,
+          precio_unitario: producto.precio,
         });
         
         await queryRunner.manager.save(orderItem);
         
         // Actualizar stock
-        await this.productsService.updateStock(item.tbl_id_producto, -item.tbl_cantidad);
+        await this.productsService.updateStock(item.id_producto, -item.cantidad);
         
         // Sumar al total
-        total += producto.tbl_precio * item.tbl_cantidad;
+        total += producto.precio * item.cantidad;
       }
       
       // Actualizar total del pedido
-      savedOrder.tbl_total = total;
+      savedOrder.total = total;
       await queryRunner.manager.save(savedOrder);
       
       // Confirmar transacción
@@ -115,10 +115,10 @@ export class OrdersService {
     // Filtrar según rol
     if (userRoles?.includes('cliente')) {
       // Cliente solo ve sus propios pedidos
-      options.where = { tbl_id_usuario: userId };
+      options.where = { id_usuario: userId };
     } else if (userRoles?.includes('repartidor')) {
       // Repartidor solo ve los pedidos asignados a él
-      options.where = { tbl_id_repartidor: userId };
+      options.where = { id_repartidor: userId };
     } else if (userRoles?.includes('admin') && !userRoles.includes('superadmin')) {
       // Admin ve pedidos de su ciudad
       if (cityId) {
@@ -140,7 +140,7 @@ export class OrdersService {
    */
   async findOne(id: number, userId?: number, userRoles?: string[], cityId?: number): Promise<Order> {
     const order = await this.orderRepository.findOne({
-      where: { tbl_id_pedido: id },
+      where: { id_pedido: id },
       relations: ['user', 'address', 'orderItems', 'orderItems.product'],
     });
 
@@ -149,9 +149,9 @@ export class OrdersService {
     }
 
     // Verificar permisos
-    if (userRoles?.includes('cliente') && order.tbl_id_usuario !== userId) {
+    if (userRoles?.includes('cliente') && order.id_usuario !== userId) {
       throw new ForbiddenException('No tiene permiso para acceder a este pedido');
-    } else if (userRoles?.includes('repartidor') && order.tbl_id_repartidor !== userId) {
+    } else if (userRoles?.includes('repartidor') && order.id_repartidor !== userId) {
       throw new ForbiddenException('No tiene permiso para acceder a este pedido');
     } else if (userRoles?.includes('admin') && !userRoles.includes('superadmin') && cityId) {
       // Verificar si el pedido es de la ciudad del admin
@@ -181,31 +181,31 @@ export class OrdersService {
     }
 
     // Verificar reglas específicas según estado
-    if (estado === 'cancelado' && (order.tbl_estado === 'entregado' || order.tbl_estado === 'en_camino')) {
+    if (estado === 'cancelado' && (order.estado === 'entregado' || order.estado === 'en_camino')) {
       throw new BadRequestException('No se puede cancelar un pedido que ya está en camino o entregado');
     }
 
     // Si se cancela, devolver stock
-    if (estado === 'cancelado' && order.tbl_estado !== 'cancelado') {
+    if (estado === 'cancelado' && order.estado !== 'cancelado') {
       for (const item of order.orderItems) {
-        await this.productsService.updateStock(item.tbl_id_producto, item.tbl_cantidad);
+        await this.productsService.updateStock(item.id_producto, item.cantidad);
       }
     }
 
     // Actualizar estado y guardar
-    order.tbl_estado = estado;
+    order.estado = estado;
     
     // Si está en_camino y es repartidor, asignarlo como repartidor
     if (estado === 'en_camino' && userRoles?.includes('repartidor')) {
-      order.tbl_id_repartidor = userId;
+      order.id_repartidor = userId;
     }
     
     // Si está entregado, registrar tiempo de entrega
     if (estado === 'entregado') {
-      const fechaPedido = new Date(order.tbl_fecha_pedido);
+      const fechaPedido = new Date(order.fecha_pedido);
       const fechaEntrega = new Date();
       const tiempoEntrega = Math.floor((fechaEntrega.getTime() - fechaPedido.getTime()) / (1000 * 60)); // Minutos
-      order.tbl_tiempo_entrega = `${tiempoEntrega} minutes`;
+      order.tiempo_entrega = `${tiempoEntrega} minutes`;
     }
     
     return this.orderRepository.save(order);

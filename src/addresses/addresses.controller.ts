@@ -25,8 +25,8 @@ export class AddressesController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   create(@Body() createAddressDto: CreateAddressDto, @Req() req) {
     // Si no se proporciona el ID de usuario, usar el del token
-    if (!createAddressDto.tbl_id_usuario) {
-      createAddressDto.tbl_id_usuario = req.user.userId;
+    if (!createAddressDto.id_usuario) {
+      createAddressDto.id_usuario = req.user.userId;
     }
     return this.addressesService.create(createAddressDto, req.user.userId, req.user.roles);
   }

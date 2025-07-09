@@ -30,11 +30,11 @@ export class UsersService {
    * @returns El usuario creado
    */
   async create(createUserDto: CreateUserDto, requestUserId?: number, userRoles?: string[]) {
-    const { tbl_correo, tbl_contrasena, roles = ['cliente'], ...userData } = createUserDto;
+    const { correo, contrasena, roles = ['cliente'], ...userData } = createUserDto;
 
     // Verificar si el email ya está registrado
     const existingUser = await this.userRepository.findOne({
-      where: { tbl_correo }
+      where: { correo }
     });
 
     if (existingUser) {
@@ -49,11 +49,11 @@ export class UsersService {
     }
 
     // Encriptar contraseña
-    const hashedPassword = await bcrypt.hash(tbl_contrasena, 12);
+    const hashedPassword = await bcrypt.hash(contrasena, 12);
 
     // Buscar roles en la base de datos
     const userRolesEntities = await this.roleRepository.find({
-      where: roles.map(role => ({ tbl_nombre: role }))
+      where: roles.map(role => ({ nombre: role }))
     });
 
     if (userRolesEntities.length === 0) {
@@ -63,8 +63,8 @@ export class UsersService {
     // Crear usuario
     const newUser = this.userRepository.create({
       ...userData,
-      tbl_correo,
-      tbl_contrasena: hashedPassword,
+      correo,
+      contrasena: hashedPassword,
       roles: userRolesEntities
     });
 
@@ -100,7 +100,7 @@ export class UsersService {
    */
   async findOne(id: number, userCity?: number, userRoles?: string[]) {
     const user = await this.userRepository.findOne({
-      where: { tbl_id_usuario: id },
+      where: { id_usuario: id },
       relations: ['roles', 'city']
     });
 
@@ -134,8 +134,8 @@ export class UsersService {
     const user = await this.findOne(id, userCity, userRoles);
     
     // Si se actualiza contraseña, encriptarla
-    if (updateUserDto.tbl_contrasena) {
-      updateUserDto.tbl_contrasena = await bcrypt.hash(updateUserDto.tbl_contrasena, 12);
+    if (updateUserDto.contrasena) {
+      updateUserDto.contrasena = await bcrypt.hash(updateUserDto.contrasena, 12);
     }
 
     // Actualizar roles si fueron proporcionados
@@ -149,7 +149,7 @@ export class UsersService {
       }
 
       const userRolesEntities = await this.roleRepository.find({
-        where: updateUserDto.roles.map(role => ({ tbl_nombre: role }))
+        where: updateUserDto.roles.map(role => ({ nombre: role }))
       });
 
       if (userRolesEntities.length === 0) {

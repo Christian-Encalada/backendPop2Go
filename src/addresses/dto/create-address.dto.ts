@@ -11,7 +11,7 @@ export class CreateAddressDto {
   })
   @IsString({ message: 'La dirección debe ser un texto válido' })
   @IsNotEmpty({ message: 'La dirección es requerida' })
-  tbl_direccion: string;
+  direccion: string;
 
   @ApiPropertyOptional({
     description: 'Referencias adicionales para ubicar la dirección',
@@ -19,7 +19,7 @@ export class CreateAddressDto {
   })
   @IsString({ message: 'La referencia debe ser un texto válido' })
   @IsOptional()
-  tbl_referencia?: string;
+  referencia?: string;
 
   @ApiProperty({
     description: 'ID de la ciudad donde se encuentra la dirección',
@@ -35,5 +35,5 @@ export class CreateAddressDto {
   })
   @IsNumber({}, { message: 'El ID de usuario debe ser un número' })
   @IsNotEmpty({ message: 'El usuario es requerido' })
-  tbl_id_usuario: number;
+  id_usuario: number;
 } 

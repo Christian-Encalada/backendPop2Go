@@ -26,7 +26,7 @@ export class AddressesService {
   async create(createAddressDto: CreateAddressDto, requestUserId: number, userRoles: string[]): Promise<Address> {
     // Verificar permisos: un usuario solo puede crear direcciones para sí mismo, excepto admins
     if (
-      createAddressDto.tbl_id_usuario !== requestUserId && 
+      createAddressDto.id_usuario !== requestUserId && 
       !userRoles.includes('admin') && 
       !userRoles.includes('superadmin')
     ) {
@@ -53,7 +53,7 @@ export class AddressesService {
     // Filtrar según rol
     if (userRoles.includes('cliente') && !userRoles.includes('admin') && !userRoles.includes('superadmin')) {
       // Cliente solo ve sus propias direcciones
-      options.where = { tbl_id_usuario: userId };
+      options.where = { id_usuario: userId };
     } else if (userRoles.includes('admin') && !userRoles.includes('superadmin') && cityId) {
       // Admin ve direcciones de su ciudad
       options.where = { id_ciudad: cityId };
@@ -73,7 +73,7 @@ export class AddressesService {
    */
   async findOne(id: number, userId: number, userRoles: string[], cityId?: number): Promise<Address> {
     const address = await this.addressRepository.findOne({
-      where: { tbl_id_direccion: id },
+      where: { id_direccion: id },
       relations: ['user', 'city'],
     });
 
@@ -86,7 +86,7 @@ export class AddressesService {
       userRoles.includes('cliente') && 
       !userRoles.includes('admin') && 
       !userRoles.includes('superadmin') && 
-      address.tbl_id_usuario !== userId
+      address.id_usuario !== userId
     ) {
       throw new ForbiddenException('No tienes permisos para ver esta dirección');
     } else if (

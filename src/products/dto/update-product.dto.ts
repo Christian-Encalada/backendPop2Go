@@ -14,7 +14,7 @@ export class UpdateProductDto {
   @IsString({ message: 'El nombre debe ser un texto válido' })
   @MaxLength(100, { message: 'El nombre no puede exceder los 100 caracteres' })
   @IsOptional()
-  tbl_nombre?: string;
+  nombre?: string;
 
   @ApiPropertyOptional({
     description: 'Descripción detallada del producto',
@@ -22,7 +22,7 @@ export class UpdateProductDto {
   })
   @IsString({ message: 'La descripción debe ser un texto válido' })
   @IsOptional()
-  tbl_descripcion?: string;
+  descripcion?: string;
 
   @ApiPropertyOptional({
     description: 'Precio del producto',
@@ -32,7 +32,7 @@ export class UpdateProductDto {
   @IsNumber({}, { message: 'El precio debe ser un número' })
   @Min(0, { message: 'El precio no puede ser negativo' })
   @IsOptional()
-  tbl_precio?: number;
+  precio?: number;
 
   @ApiPropertyOptional({
     description: 'Cantidad disponible en inventario',
@@ -42,7 +42,7 @@ export class UpdateProductDto {
   @IsNumber({}, { message: 'El stock debe ser un número' })
   @Min(0, { message: 'El stock no puede ser negativo' })
   @IsOptional()
-  tbl_stock?: number;
+  stock?: number;
 
   @ApiPropertyOptional({
     description: 'Indica si el producto está activo y disponible para la venta',
@@ -50,5 +50,5 @@ export class UpdateProductDto {
   })
   @IsBoolean({ message: 'El estado de activación debe ser un booleano' })
   @IsOptional()
-  tbl_activo?: boolean;
+  activo?: boolean;
 } 

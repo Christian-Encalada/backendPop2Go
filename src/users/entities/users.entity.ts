@@ -6,22 +6,22 @@ import { Order } from '../../orders/entities/order.entity';
 @Entity('tbl_usuarios')
 export class User {
   @PrimaryGeneratedColumn()
-  tbl_id_usuario: number;
+  id_usuario: number;
 
   @Column({ length: 100 })
-  tbl_nombre: string;
+  nombre: string;
 
   @Column({ length: 100, unique: true })
-  tbl_correo: string;
+  correo: string;
 
   @Column('text')
-  tbl_contrasena: string;
+  contrasena: string;
 
   @Column({ length: 20, nullable: true })
-  tbl_telefono: string;
+  telefono: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  tbl_fecha_registro: Date;
+  fecha_registro: Date;
 
   // Relaciones
   @ManyToOne(() => City)
@@ -34,8 +34,8 @@ export class User {
   @ManyToMany(() => Role)
   @JoinTable({
     name: 'tbl_usuario_roles',
-    joinColumn: { name: 'tbl_id_usuario' },
-    inverseJoinColumn: { name: 'tbl_id_rol' }
+    joinColumn: { name: 'id_usuario' },
+    inverseJoinColumn: { name: 'id_rol' }
   })
   roles: Role[];
 

@@ -12,7 +12,7 @@ export class UpdateAddressDto {
   })
   @IsString({ message: 'La dirección debe ser un texto válido' })
   @IsOptional()
-  tbl_direccion?: string;
+  direccion?: string;
 
   @ApiPropertyOptional({
     description: 'Referencias adicionales para ubicar la dirección',
@@ -20,7 +20,7 @@ export class UpdateAddressDto {
   })
   @IsString({ message: 'La referencia debe ser un texto válido' })
   @IsOptional()
-  tbl_referencia?: string;
+  referencia?: string;
 
   @ApiPropertyOptional({
     description: 'ID de la ciudad donde se encuentra la dirección',

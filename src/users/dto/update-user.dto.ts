@@ -12,7 +12,7 @@ export class UpdateUserDto {
   })
   @IsString({ message: 'El nombre debe ser un texto válido' })
   @IsOptional()
-  tbl_nombre?: string;
+  nombre?: string;
 
   @ApiPropertyOptional({
     description: 'Correo electrónico del usuario',
@@ -20,7 +20,7 @@ export class UpdateUserDto {
   })
   @IsEmail({}, { message: 'Debe proporcionar un correo electrónico válido' })
   @IsOptional()
-  tbl_correo?: string;
+  correo?: string;
 
   @ApiPropertyOptional({
     description: 'Contraseña del usuario',
@@ -30,7 +30,7 @@ export class UpdateUserDto {
   @IsString({ message: 'La contraseña debe ser un texto' })
   @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
   @IsOptional()
-  tbl_contrasena?: string;
+  contrasena?: string;
 
   @ApiPropertyOptional({
     description: 'Número de teléfono del usuario',
@@ -38,7 +38,7 @@ export class UpdateUserDto {
   })
   @IsString({ message: 'El teléfono debe ser un texto' })
   @IsOptional()
-  tbl_telefono?: string;
+  telefono?: string;
 
   @ApiPropertyOptional({
     description: 'ID de la ciudad del usuario',

@@ -12,7 +12,7 @@ class OrderItemDto {
   })
   @IsNumber({}, { message: 'El ID del producto debe ser un número' })
   @IsNotEmpty({ message: 'El ID del producto es requerido' })
-  tbl_id_producto: number;
+  id_producto: number;
 
   @ApiProperty({
     description: 'Cantidad del producto',
@@ -21,7 +21,7 @@ class OrderItemDto {
   })
   @IsNumber({}, { message: 'La cantidad debe ser un número' })
   @IsNotEmpty({ message: 'La cantidad es requerida' })
-  tbl_cantidad: number;
+  cantidad: number;
 }
 
 /**
@@ -34,14 +34,14 @@ export class CreateOrderDto {
   })
   @IsNumber({}, { message: 'El ID de la dirección debe ser un número' })
   @IsNotEmpty({ message: 'La dirección de entrega es requerida' })
-  tbl_id_direccion: number;
+  id_direccion: number;
 
   @ApiProperty({
     description: 'Lista de productos en el pedido',
     type: [OrderItemDto],
     example: [
-      { tbl_id_producto: 1, tbl_cantidad: 2 },
-      { tbl_id_producto: 3, tbl_cantidad: 1 }
+      { id_producto: 1, cantidad: 2 },
+      { id_producto: 3, cantidad: 1 }
     ]
   })
   @IsArray({ message: 'Los productos deben ser proporcionados como un array' })

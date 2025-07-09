@@ -12,7 +12,7 @@ export class CreateUserDto {
   })
   @IsString({ message: 'El nombre debe ser un texto válido' })
   @IsNotEmpty({ message: 'El nombre es requerido' })
-  tbl_nombre: string;
+  nombre: string;
 
   @ApiProperty({
     description: 'Correo electrónico del usuario',
@@ -20,7 +20,7 @@ export class CreateUserDto {
   })
   @IsEmail({}, { message: 'Debe proporcionar un correo electrónico válido' })
   @IsNotEmpty({ message: 'El correo es requerido' })
-  tbl_correo: string;
+  correo: string;
 
   @ApiProperty({
     description: 'Contraseña del usuario',
@@ -30,7 +30,7 @@ export class CreateUserDto {
   @IsString({ message: 'La contraseña debe ser un texto' })
   @IsNotEmpty({ message: 'La contraseña es requerida' })
   @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
-  tbl_contrasena: string;
+  contrasena: string;
 
   @ApiPropertyOptional({
     description: 'Número de teléfono del usuario',
@@ -38,7 +38,7 @@ export class CreateUserDto {
   })
   @IsString({ message: 'El teléfono debe ser un texto' })
   @IsOptional()
-  tbl_telefono?: string;
+  telefono?: string;
 
   @ApiProperty({
     description: 'ID de la ciudad del usuario',

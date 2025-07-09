@@ -35,7 +35,7 @@ export class ProductsService {
     const options: any = {};
     
     if (onlyActive) {
-      options.where = { tbl_activo: true };
+      options.where = { activo: true };
     }
     
     return this.productRepository.find(options);
@@ -48,7 +48,7 @@ export class ProductsService {
    */
   async findOne(id: number): Promise<Product> {
     const product = await this.productRepository.findOne({
-      where: { tbl_id_producto: id },
+      where: { id_producto: id },
     });
     
     if (!product) {
@@ -92,13 +92,13 @@ export class ProductsService {
   async updateStock(id: number, quantity: number): Promise<Product> {
     const product = await this.findOne(id);
     
-    const newStock = product.tbl_stock + quantity;
+    const newStock = product.stock + quantity;
     
     if (newStock < 0) {
-      throw new BadRequestException(`No hay suficiente stock del producto ${product.tbl_nombre}`);
+      throw new BadRequestException(`No hay suficiente stock del producto ${product.nombre}`);
     }
     
-    product.tbl_stock = newStock;
+    product.stock = newStock;
     return this.productRepository.save(product);
   }
 } 
