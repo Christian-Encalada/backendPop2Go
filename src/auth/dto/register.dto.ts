@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsArray, IsNumber } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsArray, IsNumber, ArrayNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -45,12 +45,11 @@ export class RegisterDto {
   @IsNumber({}, { message: 'Debe seleccionar una ciudad válida' })
   cityId: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Roles asignados al usuario (solo administradores pueden asignar roles)',
     example: ['cliente'],
     default: ['cliente']
   })
-  @IsOptional()
   @IsArray()
-  roles?: string[];
+  roles: string[];
 }
