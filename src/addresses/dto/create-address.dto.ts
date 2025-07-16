@@ -28,12 +28,4 @@ export class CreateAddressDto {
   @IsNumber({}, { message: 'El ID de ciudad debe ser un número' })
   @IsNotEmpty({ message: 'La ciudad es requerida' })
   id_ciudad: number;
-
-  @ApiProperty({
-    description: 'ID del usuario al que pertenece la dirección',
-    example: 1
-  })
-  @IsNumber({}, { message: 'El ID de usuario debe ser un número' })
-  @IsNotEmpty({ message: 'El usuario es requerido' })
-  id_usuario: number;
 } 

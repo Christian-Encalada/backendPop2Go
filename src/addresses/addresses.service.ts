@@ -5,6 +5,11 @@ import { Address } from './entities/address.entity';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 
+// Interfaz para el objeto que incluye id_usuario
+interface CreateAddressWithUserDto extends CreateAddressDto {
+  id_usuario: number;
+}
+
 /**
  * Servicio para la gestión de direcciones
  * Implementa la lógica de negocio relacionada con las direcciones
@@ -18,22 +23,22 @@ export class AddressesService {
 
   /**
    * Crea una nueva dirección
-   * @param createAddressDto Datos de la dirección a crear
+   * @param addressData Datos de la dirección a crear (incluye id_usuario)
    * @param requestUserId ID del usuario que realiza la solicitud
    * @param userRoles Roles del usuario que realiza la solicitud
    * @returns La dirección creada
    */
-  async create(createAddressDto: CreateAddressDto, requestUserId: number, userRoles: string[]): Promise<Address> {
+  async create(addressData: CreateAddressWithUserDto, requestUserId: number, userRoles: string[]): Promise<Address> {
     // Verificar permisos: un usuario solo puede crear direcciones para sí mismo, excepto admins
     if (
-      createAddressDto.id_usuario !== requestUserId && 
+      addressData.id_usuario !== requestUserId && 
       !userRoles.includes('admin') && 
       !userRoles.includes('superadmin')
     ) {
       throw new ForbiddenException('No tienes permisos para crear una dirección para otro usuario');
     }
 
-    const newAddress = this.addressRepository.create(createAddressDto);
+    const newAddress = this.addressRepository.create(addressData);
     return this.addressRepository.save(newAddress);
   }
 

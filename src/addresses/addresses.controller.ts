@@ -24,11 +24,13 @@ export class AddressesController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   create(@Body() createAddressDto: CreateAddressDto, @Req() req) {
-    // Si no se proporciona el ID de usuario, usar el del token
-    if (!createAddressDto.id_usuario) {
-      createAddressDto.id_usuario = req.user.userId;
-    }
-    return this.addressesService.create(createAddressDto, req.user.userId, req.user.roles);
+    // Crear un objeto con los datos del DTO y el ID del usuario del token
+    const addressData = {
+      ...createAddressDto,
+      id_usuario: req.user.userId
+    };
+    
+    return this.addressesService.create(addressData, req.user.userId, req.user.roles);
   }
 
   /**
