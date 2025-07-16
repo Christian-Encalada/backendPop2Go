@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 
 import { User } from '../users/entities/users.entity';
 import { Role } from '../users/entities/role.entity';
+import { Address } from '../addresses/entities/address.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -17,6 +18,9 @@ export class AuthService {
     
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+
+    @InjectRepository(Address)
+    private addressRepository: Repository<Address>,
     
     private jwtService: JwtService,
   ) {}
@@ -96,6 +100,11 @@ export class AuthService {
       cityId: user.id_ciudad,
     };
 
+    // Obtener direcciones del usuario
+    const addresses = await this.addressRepository.find({
+      where: { id_usuario: user.id_usuario },
+    });
+
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -103,6 +112,7 @@ export class AuthService {
         name: user.nombre,
         email: user.correo,
         roles,
+        addresses,
       },
     };
   }

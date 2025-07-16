@@ -30,7 +30,8 @@ export class AuthController {
           id: { type: 'number' },
           name: { type: 'string' },
           email: { type: 'string' },
-          roles: { type: 'array', items: { type: 'string' } }
+          roles: { type: 'array', items: { type: 'string' } },
+          addresses: { type: 'array', items: { type: 'object' } },
         }
       }
     }
