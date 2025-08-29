@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, Put, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, Put, ParseIntPipe, Patch } from '@nestjs/common';
 import { AddressesService } from './addresses.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
@@ -81,6 +81,21 @@ export class AddressesController {
   }
 
   /**
+   * Establece una dirección como predeterminada
+   * Verifica permisos según rol del usuario
+   */
+  @Patch(':id/default')
+  @ApiOperation({ summary: 'Establecer una dirección como predeterminada' })
+  @ApiParam({ name: 'id', description: 'ID de la dirección a establecer como predeterminada' })
+  @ApiResponse({ status: 200, description: 'Dirección establecida como predeterminada exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos para modificar esta dirección' })
+  @ApiResponse({ status: 404, description: 'Dirección no encontrada' })
+  setDefault(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.addressesService.setDefault(id, req.user.userId, req.user.roles, req.user.cityId);
+  }
+
+  /**
    * Elimina una dirección
    * Verifica permisos según rol del usuario
    */
@@ -94,4 +109,4 @@ export class AddressesController {
   remove(@Param('id', ParseIntPipe) id: number, @Req() req) {
     return this.addressesService.remove(id, req.user.userId, req.user.roles, req.user.cityId);
   }
-} 
+}

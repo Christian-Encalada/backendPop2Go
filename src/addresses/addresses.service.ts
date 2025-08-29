@@ -142,4 +142,38 @@ export class AddressesService {
     const address = await this.findOne(id, userId, userRoles, cityId);
     return this.addressRepository.remove(address);
   }
-} 
+
+  /**
+   * Establece una dirección como predeterminada
+   * @param id ID de la dirección a establecer como predeterminada
+   * @param userId ID del usuario que realiza la solicitud
+   * @param userRoles Roles del usuario
+   * @param cityId ID de la ciudad (para admins)
+   * @returns La dirección actualizada
+   */
+  async setDefault(id: number, userId: number, userRoles: string[], cityId?: number): Promise<Address> {
+    // Buscar la dirección
+    const address = await this.findOne(id, userId, userRoles, cityId);
+
+    // Primero, quitar el estado predeterminado de todas las direcciones del usuario
+    if (userRoles.includes('admin') || userRoles.includes('superadmin')) {
+      // Para admins, actualizar todas las direcciones del usuario propietario de la dirección
+      await this.addressRepository.update(
+        { id_usuario: address.id_usuario },
+        { is_default: false }
+      );
+    } else {
+      // Para clientes, actualizar solo sus propias direcciones
+      await this.addressRepository.update(
+        { id_usuario: userId },
+        { is_default: false }
+      );
+    }
+
+    // Establecer la dirección seleccionada como predeterminada
+    await this.addressRepository.update(id, { is_default: true });
+
+    // Retornar la dirección actualizada
+    return this.findOne(id, userId, userRoles, cityId);
+  }
+}

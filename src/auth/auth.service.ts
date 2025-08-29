@@ -149,4 +149,29 @@ export class AuthService {
       cityId: user.id_ciudad,
     };
   }
+
+  // Obtener perfil completo del usuario incluyendo direcciones
+  async getUserProfile(userId: number): Promise<any> {
+    const user = await this.usersRepository.findOne({
+      where: { id_usuario: userId },
+      relations: ['roles'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Obtener direcciones del usuario
+    const addresses = await this.addressRepository.find({
+      where: { id_usuario: userId },
+    });
+
+    return {
+      id: user.id_usuario,
+      name: user.nombre,
+      email: user.correo,
+      roles: user.roles.map(role => role.nombre),
+      addresses,
+    };
+  }
 }
