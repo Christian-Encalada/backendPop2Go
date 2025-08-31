@@ -18,6 +18,15 @@ export class Address {
   @Column('text', { nullable: true })
   referencia: string;
 
+  @Column('boolean', { default: false })
+  is_default: boolean;
+
+  @Column('decimal', { precision: 10, scale: 8, nullable: true })
+  latitude: number;
+
+  @Column('decimal', { precision: 11, scale: 8, nullable: true })
+  longitude: number;
+
   // Relaciones
   @ManyToOne(() => User)
   @JoinColumn({ name: 'id_usuario' })
@@ -35,4 +44,4 @@ export class Address {
 
   @OneToMany(() => Order, order => order.address)
   orders: Order[];
-} 
+}

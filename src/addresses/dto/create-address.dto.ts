@@ -28,4 +28,20 @@ export class CreateAddressDto {
   @IsNumber({}, { message: 'El ID de ciudad debe ser un número' })
   @IsNotEmpty({ message: 'La ciudad es requerida' })
   id_ciudad: number;
-} 
+
+  @ApiPropertyOptional({
+    description: 'Latitud de la ubicación',
+    example: -0.1806532
+  })
+  @IsNumber({}, { message: 'La latitud debe ser un número válido' })
+  @IsOptional()
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitud de la ubicación',
+    example: -78.4678382
+  })
+  @IsNumber({}, { message: 'La longitud debe ser un número válido' })
+  @IsOptional()
+  longitude?: number;
+}
