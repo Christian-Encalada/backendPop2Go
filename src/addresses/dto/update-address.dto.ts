@@ -31,6 +31,14 @@ export class UpdateAddressDto {
   id_ciudad?: number;
 
   @ApiPropertyOptional({
+    description: 'ID del local asociado a esta dirección',
+    example: 1
+  })
+  @IsNumber({}, { message: 'El ID de local debe ser un número' })
+  @IsOptional()
+  id_local?: number;
+
+  @ApiPropertyOptional({
     description: 'Latitud de la ubicación',
     example: -0.1806532
   })
