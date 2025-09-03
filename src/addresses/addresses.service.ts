@@ -52,7 +52,7 @@ export class AddressesService {
   async findAll(userId: number, userRoles: string[], cityId?: number): Promise<Address[]> {
     // Construir opciones de consulta según permisos
     const options: any = {
-      relations: ['user', 'city'],
+      relations: ['user', 'city', 'store'],
     };
 
     // Filtrar según rol
@@ -79,7 +79,7 @@ export class AddressesService {
   async findOne(id: number, userId: number, userRoles: string[], cityId?: number): Promise<Address> {
     const address = await this.addressRepository.findOne({
       where: { id_direccion: id },
-      relations: ['user', 'city'],
+      relations: ['user', 'city', 'store'],
     });
 
     if (!address) {

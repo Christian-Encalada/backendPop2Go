@@ -10,6 +10,7 @@ import { CitiesModule } from './cities/cities.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { StoresModule } from './stores/stores.module';
 import { AppController } from './app.controller';
 
 /**
@@ -36,6 +37,7 @@ import { AppController } from './app.controller';
     AuthModule,
     UsersModule,
     CitiesModule,
+    StoresModule,
     ProductsModule,
     OrdersModule,
     AddressesModule,
