@@ -11,6 +11,7 @@ import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { StoresModule } from './stores/stores.module';
+import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 
 /**
@@ -41,6 +42,7 @@ import { AppController } from './app.controller';
     ProductsModule,
     OrdersModule,
     AddressesModule,
+    AdminModule,
   ],
   controllers: [AppController],
 })
