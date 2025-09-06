@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/users.entity';
@@ -96,5 +96,85 @@ export class AdminService {
       .getMany();
 
     return pendingDeliveries;
+  }
+
+  /**
+   * Aprueba un repartidor pendiente
+   */
+  async approveDelivery(deliveryId: number, userRoles: string[], userCity?: number) {
+    const isSuperAdmin = userRoles.includes('superadmin');
+
+    // Buscar el repartidor
+    const delivery = await this.userRepository
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.roles', 'role')
+      .innerJoinAndSelect('user.city', 'city')
+      .where('user.id_usuario = :deliveryId', { deliveryId })
+      .andWhere('role.nombre = :roleName', { roleName: 'repartidor' })
+      .andWhere(isSuperAdmin ? '1=1' : 'user.id_ciudad = :cityId', 
+        isSuperAdmin ? {} : { cityId: userCity })
+      .getOne();
+
+    if (!delivery) {
+      throw new NotFoundException('Repartidor no encontrado o no tienes permisos para aprobarlo');
+    }
+
+    if (delivery.delivery_status === 'approved') {
+      throw new BadRequestException('El repartidor ya está aprobado');
+    }
+
+    // Aprobar el repartidor
+    delivery.delivery_status = 'approved';
+    await this.userRepository.save(delivery);
+
+    return {
+      message: 'Repartidor aprobado exitosamente',
+      delivery: {
+        id: delivery.id_usuario,
+        name: delivery.nombre,
+        email: delivery.correo,
+        status: delivery.delivery_status
+      }
+    };
+  }
+
+  /**
+   * Rechaza un repartidor pendiente
+   */
+  async rejectDelivery(deliveryId: number, userRoles: string[], userCity?: number) {
+    const isSuperAdmin = userRoles.includes('superadmin');
+
+    // Buscar el repartidor
+    const delivery = await this.userRepository
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.roles', 'role')
+      .innerJoinAndSelect('user.city', 'city')
+      .where('user.id_usuario = :deliveryId', { deliveryId })
+      .andWhere('role.nombre = :roleName', { roleName: 'repartidor' })
+      .andWhere(isSuperAdmin ? '1=1' : 'user.id_ciudad = :cityId', 
+        isSuperAdmin ? {} : { cityId: userCity })
+      .getOne();
+
+    if (!delivery) {
+      throw new NotFoundException('Repartidor no encontrado o no tienes permisos para rechazarlo');
+    }
+
+    if (delivery.delivery_status === 'rejected') {
+      throw new BadRequestException('El repartidor ya está rechazado');
+    }
+
+    // Rechazar el repartidor
+    delivery.delivery_status = 'rejected';
+    await this.userRepository.save(delivery);
+
+    return {
+      message: 'Repartidor rechazado exitosamente',
+      delivery: {
+        id: delivery.id_usuario,
+        name: delivery.nombre,
+        email: delivery.correo,
+        status: delivery.delivery_status
+      }
+    };
   }
 }

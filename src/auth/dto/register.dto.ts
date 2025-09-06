@@ -52,4 +52,28 @@ export class RegisterDto {
   })
   @IsArray()
   roles: string[];
+
+  @ApiPropertyOptional({
+    description: 'Imagen de perfil del usuario (para delivery)',
+    example: 'https://example.com/profile.jpg'
+  })
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Descripción del usuario (para delivery)',
+    example: 'Repartidor con experiencia en entregas rápidas'
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Vehículo del repartidor (para delivery)',
+    example: 'Motocicleta Honda'
+  })
+  @IsOptional()
+  @IsString()
+  vehicle?: string;
 }

@@ -23,6 +23,24 @@ export class User {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   fecha_registro: Date;
 
+  // Campos específicos para delivery
+  @Column({ type: 'text', nullable: true })
+  profile_image: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @Column({ length: 100, nullable: true })
+  vehicle: string;
+
+  @Column({ 
+    type: 'enum',
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    nullable: true 
+  })
+  delivery_status: 'pending' | 'approved' | 'rejected'; // Estado del delivery
+
   // Relaciones
   @ManyToOne(() => City)
   @JoinColumn({ name: 'id_ciudad' })

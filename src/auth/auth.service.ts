@@ -27,7 +27,7 @@ export class AuthService {
 
   // Registrar nuevo usuario
   async register(registerDto: RegisterDto) {
-    const { email, password, name, phone, cityId, roles = ['cliente'] } = registerDto;
+    const { email, password, name, phone, cityId, roles = ['cliente'], profileImage, description, vehicle } = registerDto;
 
     // Verificar si el usuario ya existe
     const existingUser = await this.usersRepository.findOne({
@@ -49,12 +49,18 @@ export class AuthService {
 
     // Crear nuevo usuario
     const hashedPassword = await bcrypt.hash(password, 10);
+    const isDelivery = roles.includes('repartidor');
+    
     const newUser = this.usersRepository.create({
       correo: email,
       contrasena: hashedPassword,
       nombre: name,
       telefono: phone,
       id_ciudad: cityId,
+      profile_image: profileImage,
+      description: description,
+      vehicle: vehicle,
+      delivery_status: isDelivery ? 'pending' : null,
       roles: userRoles, // Asignar roles al usuario
     });
 
@@ -111,8 +117,16 @@ export class AuthService {
         id: user.id_usuario,
         name: user.nombre,
         email: user.correo,
+        phone: user.telefono,
+        registrationDate: user.fecha_registro,
         roles,
+        cityId: user.id_ciudad,
         addresses,
+        // Campos específicos para delivery
+        profileImage: user.profile_image,
+        description: user.description,
+        vehicle: user.vehicle,
+        delivery_status: user.delivery_status,
       },
     };
   }
@@ -121,7 +135,7 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersRepository.findOne({
       where: { correo: email },
-      relations: ['roles'],
+      relations: ['roles', 'city'],
     });
 
     if (user && (await bcrypt.compare(password, user.contrasena))) {
@@ -154,7 +168,7 @@ export class AuthService {
   async getUserProfile(userId: number): Promise<any> {
     const user = await this.usersRepository.findOne({
       where: { id_usuario: userId },
-      relations: ['roles'],
+      relations: ['roles', 'city'],
     });
 
     if (!user) {
@@ -170,8 +184,16 @@ export class AuthService {
       id: user.id_usuario,
       name: user.nombre,
       email: user.correo,
+      phone: user.telefono,
+      registrationDate: user.fecha_registro,
       roles: user.roles.map(role => role.nombre),
+      city: user.city,
       addresses,
+      // Campos específicos para delivery
+      profileImage: user.profile_image,
+      description: user.description,
+      vehicle: user.vehicle,
+      delivery_status: user.delivery_status,
     };
   }
 }
