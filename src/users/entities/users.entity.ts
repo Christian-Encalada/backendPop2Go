@@ -36,6 +36,7 @@ export class User {
   @Column({ 
     type: 'enum',
     enum: ['pending', 'approved', 'rejected'],
+    enumName: 'delivery_status_enum',
     default: 'pending',
     nullable: true 
   })
