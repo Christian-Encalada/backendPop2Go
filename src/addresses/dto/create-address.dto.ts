@@ -22,20 +22,12 @@ export class CreateAddressDto {
   referencia?: string;
 
   @ApiProperty({
-    description: 'ID de la ciudad donde se encuentra la dirección',
-    example: 1
-  })
-  @IsNumber({}, { message: 'El ID de ciudad debe ser un número' })
-  @IsNotEmpty({ message: 'La ciudad es requerida' })
-  id_ciudad: number;
-
-  @ApiPropertyOptional({
-    description: 'ID del local asociado a esta dirección',
+    description: 'ID del local asociado a la dirección',
     example: 1
   })
   @IsNumber({}, { message: 'El ID de local debe ser un número' })
-  @IsOptional()
-  id_local?: number;
+  @IsNotEmpty({ message: 'El local es requerido' })
+  id_local: number;
 
   @ApiPropertyOptional({
     description: 'Latitud de la ubicación',

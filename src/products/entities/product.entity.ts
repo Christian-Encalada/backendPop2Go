@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { OrderItem } from '../../orders/entities/order-item.entity';
+import { StockLocal } from './stock-local.entity';
 
 /**
  * Entidad para la tabla de productos
@@ -28,4 +29,7 @@ export class Product {
   // Relaciones
   @OneToMany(() => OrderItem, orderItem => orderItem.product)
   orderItems: OrderItem[];
-} 
+
+  @OneToMany(() => StockLocal, stockLocal => stockLocal.product)
+  stockLocales: StockLocal[];
+}

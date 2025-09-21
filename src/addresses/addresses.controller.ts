@@ -96,6 +96,34 @@ export class AddressesController {
   }
 
   /**
+   * Cambia el local asociado a una dirección específica
+   * Verifica permisos según rol del usuario
+   */
+  @Patch(':id/store')
+  @ApiOperation({ summary: 'Cambiar el local asociado a una dirección' })
+  @ApiParam({ name: 'id', description: 'ID de la dirección a actualizar' })
+  @ApiResponse({ status: 200, description: 'Local de la dirección actualizado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos para modificar esta dirección' })
+  @ApiResponse({ status: 404, description: 'Dirección no encontrada' })
+  updateStore(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { id_local: number },
+    @Req() req
+  ) {
+    console.log('🔄 Controller - updateStore recibido:', {
+      id,
+      body,
+      userId: req.user?.userId,
+      userRoles: req.user?.roles,
+      cityId: req.user?.cityId
+    });
+    
+    return this.addressesService.updateStore(id, body.id_local, req.user.userId, req.user.roles, req.user.cityId);
+  }
+
+  /**
    * Elimina una dirección
    * Verifica permisos según rol del usuario
    */

@@ -1,8 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
-import { City } from '../../cities/entities/city.entity';
-import { Order } from '../../orders/entities/order.entity';
 import { Store } from '../../stores/entities/store.entity';
+import { Order } from '../../orders/entities/order.entity';
 
 /**
  * Entidad para la tabla de direcciones
@@ -36,18 +35,11 @@ export class Address {
   @Column()
   id_usuario: number;
 
-  @ManyToOne(() => City)
-  @JoinColumn({ name: 'id_ciudad' })
-  city: City;
-
-  @Column()
-  id_ciudad: number;
-
   @ManyToOne(() => Store)
   @JoinColumn({ name: 'id_local' })
   store: Store;
 
-  @Column({ nullable: true })
+  @Column()
   id_local: number;
 
   @OneToMany(() => Order, order => order.address)

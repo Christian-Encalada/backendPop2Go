@@ -77,6 +77,32 @@ export class CitiesService {
   }
 
   /**
+   * Actualiza una ciudad
+   * @param id ID de la ciudad a actualizar
+   * @param updateCityDto Datos actualizados de la ciudad
+   * @returns La ciudad actualizada
+   */
+  async update(id: number, updateCityDto: CreateCityDto): Promise<City> {
+    const city = await this.findOne(id);
+    
+    // Verificar si ya existe otra ciudad con el mismo nombre
+    if (updateCityDto.nombre !== city.nombre) {
+      const existingCity = await this.cityRepository.findOne({
+        where: { nombre: updateCityDto.nombre }
+      });
+      
+      if (existingCity) {
+        throw new ConflictException(`Ya existe una ciudad con el nombre ${updateCityDto.nombre}`);
+      }
+    }
+
+    // Actualizar los campos
+    Object.assign(city, updateCityDto);
+    
+    return this.cityRepository.save(city);
+  }
+
+  /**
    * Elimina una ciudad por su ID
    * @param id ID de la ciudad a eliminar
    * @returns La ciudad eliminada
@@ -85,4 +111,4 @@ export class CitiesService {
     const city = await this.findOne(id);
     return this.cityRepository.remove(city);
   }
-} 
+}

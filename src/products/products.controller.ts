@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe, Put, Query, ParseBoolPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe, Put, Query, ParseBoolPipe, Patch } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -38,8 +38,15 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'Obtener todos los productos' })
   @ApiQuery({ name: 'active', required: false, type: Boolean, description: 'Filtrar solo productos activos' })
+  @ApiQuery({ name: 'localId', required: false, type: Number, description: 'ID del local para obtener stock específico' })
   @ApiResponse({ status: 200, description: 'Lista de productos obtenida exitosamente' })
-  findAll(@Query('active', new ParseBoolPipe({ optional: true })) active?: boolean) {
+  findAll(
+    @Query('active', new ParseBoolPipe({ optional: true })) active?: boolean,
+    @Query('localId', new ParseIntPipe({ optional: true })) localId?: number
+  ) {
+    if (localId) {
+      return this.productsService.findByLocal(localId, active);
+    }
     return this.productsService.findAll(active);
   }
 
@@ -90,4 +97,66 @@ export class ProductsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.remove(id);
   }
-} 
+
+  /**
+   * Obtiene el stock de un producto en un local específico
+   */
+  @Get(':productId/stock/:localId')
+  @ApiOperation({ summary: 'Obtener stock de un producto en un local específico' })
+  @ApiParam({ name: 'productId', description: 'ID del producto' })
+  @ApiParam({ name: 'localId', description: 'ID del local' })
+  @ApiResponse({ status: 200, description: 'Stock obtenido exitosamente' })
+  @ApiResponse({ status: 404, description: 'Stock no encontrado' })
+  getStockLocal(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Param('localId', ParseIntPipe) localId: number
+  ) {
+    return this.productsService.getStockLocal(productId, localId);
+  }
+
+  /**
+   * Actualiza el stock de un producto en un local específico
+   * Solo admin y superadmin pueden actualizar stock
+   */
+  @Patch(':productId/stock/:localId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar stock de un producto en un local específico' })
+  @ApiParam({ name: 'productId', description: 'ID del producto' })
+  @ApiParam({ name: 'localId', description: 'ID del local' })
+  @ApiResponse({ status: 200, description: 'Stock actualizado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
+  @ApiResponse({ status: 404, description: 'Producto o local no encontrado' })
+  updateStockLocal(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Param('localId', ParseIntPipe) localId: number,
+    @Body() body: { stock: number; precio_local?: number }
+  ) {
+    return this.productsService.setStockLocal(productId, localId, body.stock, body.precio_local);
+  }
+
+  /**
+   * Reduce el stock de un producto en un local específico (para pedidos)
+   * Solo admin y superadmin pueden reducir stock
+   */
+  @Patch(':productId/stock/:localId/reduce')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reducir stock de un producto en un local específico' })
+  @ApiParam({ name: 'productId', description: 'ID del producto' })
+  @ApiParam({ name: 'localId', description: 'ID del local' })
+  @ApiResponse({ status: 200, description: 'Stock reducido exitosamente' })
+  @ApiResponse({ status: 400, description: 'Stock insuficiente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
+  reduceStockLocal(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Param('localId', ParseIntPipe) localId: number,
+    @Body() body: { quantity: number }
+  ) {
+    return this.productsService.updateStockLocal(productId, localId, -body.quantity);
+  }
+}

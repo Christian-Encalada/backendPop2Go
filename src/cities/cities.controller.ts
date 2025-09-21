@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { CitiesService } from './cities.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -57,6 +57,26 @@ export class CitiesController {
   }
 
   /**
+   * Actualiza una ciudad
+   * Solo admins y superadmins pueden actualizar ciudades
+   */
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar una ciudad' })
+  @ApiParam({ name: 'id', description: 'ID de la ciudad a actualizar' })
+  @ApiResponse({ status: 200, description: 'Ciudad actualizada exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
+  @ApiResponse({ status: 404, description: 'Ciudad no encontrada' })
+  @ApiResponse({ status: 409, description: 'Conflicto - Ya existe una ciudad con ese nombre' })
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateCityDto: CreateCityDto) {
+    return this.citiesService.update(id, updateCityDto);
+  }
+
+  /**
    * Elimina una ciudad
    * Solo superadmins pueden eliminar ciudades
    */
@@ -73,4 +93,4 @@ export class CitiesController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.citiesService.remove(id);
   }
-} 
+}

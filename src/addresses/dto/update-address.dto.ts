@@ -23,18 +23,10 @@ export class UpdateAddressDto {
   referencia?: string;
 
   @ApiPropertyOptional({
-    description: 'ID de la ciudad donde se encuentra la dirección',
+    description: 'ID del local asociado a la dirección',
     example: 1
   })
-  @IsNumber({}, { message: 'El ID de ciudad debe ser un número' })
-  @IsOptional()
-  id_ciudad?: number;
-
-  @ApiPropertyOptional({
-    description: 'ID del local asociado a esta dirección',
-    example: 1
-  })
-  @IsNumber({}, { message: 'El ID de local debe ser un número' })
+  @IsNumber({}, { message: 'El ID del local debe ser un número' })
   @IsOptional()
   id_local?: number;
 

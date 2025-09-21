@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
+import { StockLocal } from './entities/stock-local.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
@@ -14,6 +15,8 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(StockLocal)
+    private stockLocalRepository: Repository<StockLocal>,
   ) {}
 
   /**
@@ -39,6 +42,32 @@ export class ProductsService {
     }
     
     return this.productRepository.find(options);
+  }
+
+  /**
+   * Obtiene productos con stock por local específico
+   * @param localId ID del local
+   * @param onlyActive Si es true, solo devuelve productos activos
+   * @returns Lista de productos con stock del local
+   */
+  async findByLocal(localId: number, onlyActive: boolean = true): Promise<any[]> {
+    const query = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.stockLocales', 'stockLocal', 'stockLocal.id_local = :localId', { localId })
+      .where('product.activo = :activo', { activo: onlyActive });
+
+    const products = await query.getMany();
+
+    return products.map(product => {
+      const stockLocal = product.stockLocales[0];
+      return {
+        ...product,
+        stock: stockLocal ? stockLocal.stock : 0,
+        precio: stockLocal?.precio_local || product.precio,
+        disponible: stockLocal ? stockLocal.activo : false,
+        stockLocales: undefined // Removemos la relación para limpiar la respuesta
+      };
+    });
   }
 
   /**
@@ -101,4 +130,85 @@ export class ProductsService {
     product.stock = newStock;
     return this.productRepository.save(product);
   }
-} 
+
+  /**
+   * Actualiza el stock de un producto en un local específico
+   * @param productId ID del producto
+   * @param localId ID del local
+   * @param quantity Cantidad a reducir (negativa) o aumentar (positiva)
+   * @returns El stock local actualizado
+   */
+  async updateStockLocal(productId: number, localId: number, quantity: number): Promise<StockLocal> {
+    let stockLocal = await this.stockLocalRepository.findOne({
+      where: { id_producto: productId, id_local: localId }
+    });
+
+    if (!stockLocal) {
+      // Si no existe, crear un nuevo registro
+      stockLocal = this.stockLocalRepository.create({
+        id_producto: productId,
+        id_local: localId,
+        stock: 0,
+        activo: true
+      });
+    }
+
+    const newStock = stockLocal.stock + quantity;
+    
+    if (newStock < 0) {
+      throw new BadRequestException(`No hay suficiente stock del producto en este local`);
+    }
+
+    stockLocal.stock = newStock;
+    stockLocal.fecha_actualizacion = new Date();
+    
+    return this.stockLocalRepository.save(stockLocal);
+  }
+
+  /**
+   * Obtiene el stock de un producto en un local específico
+   * @param productId ID del producto
+   * @param localId ID del local
+   * @returns El stock local o null si no existe
+   */
+  async getStockLocal(productId: number, localId: number): Promise<StockLocal | null> {
+    return this.stockLocalRepository.findOne({
+      where: { id_producto: productId, id_local: localId },
+      relations: ['product', 'store']
+    });
+  }
+
+  /**
+   * Crea o actualiza el stock de un producto en un local
+   * @param productId ID del producto
+   * @param localId ID del local
+   * @param stock Cantidad de stock
+   * @param precioLocal Precio específico del local (opcional)
+   * @returns El stock local creado/actualizado
+   */
+  async setStockLocal(productId: number, localId: number, stock: number, precioLocal?: number): Promise<StockLocal> {
+    let stockLocal = await this.stockLocalRepository.findOne({
+      where: { id_producto: productId, id_local: localId }
+    });
+
+    if (stockLocal) {
+      // Actualizar existente
+      stockLocal.stock = stock;
+      if (precioLocal !== undefined) {
+        stockLocal.precio_local = precioLocal;
+      }
+      stockLocal.fecha_actualizacion = new Date();
+    } else {
+      // Crear nuevo
+      stockLocal = this.stockLocalRepository.create({
+        id_producto: productId,
+        id_local: localId,
+        stock,
+        precio_local: precioLocal,
+        activo: true
+      });
+    }
+
+    return this.stockLocalRepository.save(stockLocal);
+  }
+}

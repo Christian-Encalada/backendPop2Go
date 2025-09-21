@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Address } from './entities/address.entity';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
+import { Store } from '../stores/entities/store.entity';
 
 // Interfaz para el objeto que incluye id_usuario
 interface CreateAddressWithUserDto extends CreateAddressDto {
@@ -19,6 +20,8 @@ export class AddressesService {
   constructor(
     @InjectRepository(Address)
     private addressRepository: Repository<Address>,
+    @InjectRepository(Store)
+    private storeRepository: Repository<Store>,
   ) {}
 
   /**
@@ -38,6 +41,17 @@ export class AddressesService {
       throw new ForbiddenException('No tienes permisos para crear una dirección para otro usuario');
     }
 
+    // Validar que el local existe
+    if (addressData.id_local) {
+      const store = await this.storeRepository.findOne({
+        where: { id_local: addressData.id_local, activo: true }
+      });
+      
+      if (!store) {
+        throw new BadRequestException('El local especificado no existe o no está activo');
+      }
+    }
+
     const newAddress = this.addressRepository.create(addressData);
     return this.addressRepository.save(newAddress);
   }
@@ -51,21 +65,22 @@ export class AddressesService {
    */
   async findAll(userId: number, userRoles: string[], cityId?: number): Promise<Address[]> {
     // Construir opciones de consulta según permisos
-    const options: any = {
-      relations: ['user', 'city', 'store'],
-    };
+    const queryBuilder = this.addressRepository.createQueryBuilder('address')
+      .leftJoinAndSelect('address.user', 'user')
+      .leftJoinAndSelect('address.store', 'store')
+      .leftJoinAndSelect('store.city', 'city');
 
     // Filtrar según rol
     if (userRoles.includes('cliente') && !userRoles.includes('admin') && !userRoles.includes('superadmin')) {
       // Cliente solo ve sus propias direcciones
-      options.where = { id_usuario: userId };
+      queryBuilder.where('address.id_usuario = :userId', { userId });
     } else if (userRoles.includes('admin') && !userRoles.includes('superadmin') && cityId) {
-      // Admin ve direcciones de su ciudad
-      options.where = { id_ciudad: cityId };
+      // Admin ve direcciones de su ciudad (a través del local)
+      queryBuilder.where('city.id_ciudad = :cityId', { cityId });
     }
     // Superadmin ve todas las direcciones
 
-    return this.addressRepository.find(options);
+    return queryBuilder.getMany();
   }
 
   /**
@@ -79,7 +94,7 @@ export class AddressesService {
   async findOne(id: number, userId: number, userRoles: string[], cityId?: number): Promise<Address> {
     const address = await this.addressRepository.findOne({
       where: { id_direccion: id },
-      relations: ['user', 'city', 'store'],
+      relations: ['user', 'store', 'store.city'],
     });
 
     if (!address) {
@@ -98,7 +113,7 @@ export class AddressesService {
       userRoles.includes('admin') && 
       !userRoles.includes('superadmin') && 
       cityId && 
-      address.id_ciudad !== cityId
+      address.store?.city?.id_ciudad !== cityId
     ) {
       throw new ForbiddenException('No tienes permisos para ver direcciones de otras ciudades');
     }
@@ -122,12 +137,58 @@ export class AddressesService {
     userRoles: string[], 
     cityId?: number
   ): Promise<Address> {
+    console.log('🔄 Backend - Actualizando dirección:', {
+      id,
+      updateAddressDto,
+      userId,
+      userRoles,
+      cityId
+    });
+    
     const address = await this.findOne(id, userId, userRoles, cityId);
+    
+    console.log('📍 Backend - Dirección antes de actualizar:', {
+      id_direccion: address.id_direccion,
+      direccion: address.direccion,
+      id_local: address.id_local,
+      referencia: address.referencia
+    });
     
     // Actualizar datos
     Object.assign(address, updateAddressDto);
     
-    return this.addressRepository.save(address);
+    console.log('📍 Backend - Dirección después de Object.assign:', {
+      id_direccion: address.id_direccion,
+      direccion: address.direccion,
+      id_local: address.id_local,
+      referencia: address.referencia
+    });
+    
+    const savedAddress = await this.addressRepository.save(address);
+    
+    console.log('✅ Backend - Dirección guardada en BD:', {
+      id_direccion: savedAddress.id_direccion,
+      direccion: savedAddress.direccion,
+      id_local: savedAddress.id_local,
+      referencia: savedAddress.referencia
+    });
+    
+    // Recargar la dirección con las relaciones actualizadas
+    const updatedAddress = await this.addressRepository.findOne({
+      where: { id_direccion: savedAddress.id_direccion },
+      relations: ['user', 'store', 'store.city'],
+    });
+    
+    console.log('🔄 Backend - Dirección recargada con relaciones:', {
+      id_direccion: updatedAddress.id_direccion,
+      direccion: updatedAddress.direccion,
+      city: updatedAddress.store?.city,
+      id_local: updatedAddress.id_local,
+      store: updatedAddress.store,
+      referencia: updatedAddress.referencia
+    });
+    
+    return updatedAddress;
   }
 
   /**
@@ -175,5 +236,71 @@ export class AddressesService {
 
     // Retornar la dirección actualizada
     return this.findOne(id, userId, userRoles, cityId);
+  }
+
+  /**
+   * Actualiza el local asociado a una dirección específica
+   * @param id ID de la dirección a actualizar
+   * @param id_local ID del nuevo local
+   * @param userId ID del usuario que realiza la solicitud
+   * @param userRoles Roles del usuario
+   * @param cityId ID de la ciudad (para admins)
+   * @returns La dirección actualizada
+   */
+  async updateStore(id: number, id_local: number, userId: number, userRoles: string[], cityId?: number): Promise<Address> {
+    console.log('🔄 Backend - updateStore iniciado:', {
+      id,
+      id_local,
+      userId,
+      userRoles,
+      cityId
+    });
+
+    try {
+      // Buscar la dirección y verificar permisos
+      const address = await this.findOne(id, userId, userRoles, cityId);
+      console.log('📍 Backend - Dirección encontrada:', {
+        id_direccion: address.id_direccion,
+        id_usuario: address.id_usuario,
+        id_local_actual: address.id_local,
+        direccion: address.direccion
+      });
+
+      // Verificar que el local existe
+      const store = await this.addressRepository.manager.getRepository('Store').findOne({
+        where: { id_local },
+        relations: ['city']
+      });
+
+      if (!store) {
+        console.error('❌ Backend - Local no encontrado:', id_local);
+        throw new BadRequestException(`Local con ID ${id_local} no encontrado`);
+      }
+
+      console.log('🏪 Backend - Local encontrado:', {
+        id_local: store.id_local,
+        nombre: store.nombre,
+        id_ciudad: store.id_ciudad
+      });
+
+      // Actualizar solo el campo id_local
+      console.log('🔄 Backend - Actualizando dirección con nuevo local...');
+      await this.addressRepository.update(id, { id_local });
+
+      console.log('✅ Backend - Dirección actualizada exitosamente');
+
+      // Retornar la dirección actualizada
+      const updatedAddress = await this.findOne(id, userId, userRoles, cityId);
+      console.log('📍 Backend - Dirección actualizada retornada:', {
+        id_direccion: updatedAddress.id_direccion,
+        id_local_nuevo: updatedAddress.id_local,
+        store_nombre: updatedAddress.store?.nombre
+      });
+
+      return updatedAddress;
+    } catch (error) {
+      console.error('❌ Backend - Error en updateStore:', error);
+      throw error;
+    }
   }
 }

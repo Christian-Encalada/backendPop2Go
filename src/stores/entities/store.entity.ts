@@ -46,6 +46,7 @@ export class Store {
   @Column()
   id_ciudad: number;
 
+  // Relación inversa con Address
   @OneToMany(() => Address, address => address.store)
   addresses: Address[];
 }

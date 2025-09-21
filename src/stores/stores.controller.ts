@@ -13,7 +13,7 @@ import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 
-@Controller('stores')
+@Controller('locales')
 export class StoresController {
   constructor(private readonly storesService: StoresService) {}
 
@@ -30,9 +30,9 @@ export class StoresController {
     return this.storesService.findAll();
   }
 
-  @Get('by-city/:cityId')
-  findByCity(@Param('cityId', ParseIntPipe) cityId: number) {
-    return this.storesService.findByCity(cityId);
+  @Get('by-city/:id_ciudad')
+  findByCity(@Param('id_ciudad', ParseIntPipe) id_ciudad: number) {
+    return this.storesService.findByCity(id_ciudad);
   }
 
   @Get(':id')
