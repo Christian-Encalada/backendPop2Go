@@ -15,8 +15,16 @@ export class StockLocal {
   @Column()
   stock: number;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
-  precio_local: number; // Precio específico del local (opcional, si es null usa el precio base del producto)
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | null) => (value === null ? null : parseFloat(value)),
+    },
+  })
+  precio_local: number;
 
   @Column({ default: true })
   activo: boolean;

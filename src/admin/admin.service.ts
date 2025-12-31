@@ -98,13 +98,76 @@ export class AdminService {
     return pendingDeliveries;
   }
 
+  async getAllDeliveries(userRoles: string[], userCity?: number) {
+    const isSuperAdmin = userRoles.includes('superadmin');
+
+    const deliveries = await this.userRepository
+      .createQueryBuilder('user')
+      .innerJoin('user.roles', 'role')
+      .innerJoinAndSelect('user.city', 'city')
+      .where('role.nombre = :roleName', { roleName: 'repartidor' })
+      .andWhere(isSuperAdmin ? '1=1' : 'user.id_ciudad = :cityId', 
+        isSuperAdmin ? {} : { cityId: userCity })
+      .select([
+        'user.id_usuario',
+        'user.nombre',
+        'user.correo',
+        'user.telefono',
+        'user.fecha_registro',
+        'user.delivery_status',
+        'city.id_ciudad',
+        'city.nombre'
+      ])
+      .getMany();
+
+    return deliveries.map(d => ({
+      id_usuario: d.id_usuario,
+      nombre: d.nombre,
+      correo: d.correo,
+      telefono: d.telefono,
+      estado: d.delivery_status,
+      fecha_registro: d.fecha_registro,
+      city: d.city
+    }));
+  }
+
+  async deactivateDelivery(deliveryId: number, userRoles: string[], userCity?: number) {
+    const isSuperAdmin = userRoles.includes('superadmin');
+
+    const delivery = await this.userRepository
+      .createQueryBuilder('user')
+      .innerJoin('user.roles', 'role')
+      .innerJoinAndSelect('user.city', 'city')
+      .where('user.id_usuario = :deliveryId', { deliveryId })
+      .andWhere('role.nombre = :roleName', { roleName: 'repartidor' })
+      .andWhere(isSuperAdmin ? '1=1' : 'user.id_ciudad = :cityId', 
+        isSuperAdmin ? {} : { cityId: userCity })
+      .getOne();
+
+    if (!delivery) {
+      throw new NotFoundException('Repartidor no encontrado o no tienes permisos para desactivarlo');
+    }
+
+    delivery.delivery_status = 'rejected';
+    await this.userRepository.save(delivery);
+
+    return {
+      message: 'Repartidor desactivado exitosamente',
+      delivery: {
+        id: delivery.id_usuario,
+        name: delivery.nombre,
+        email: delivery.correo,
+        status: delivery.delivery_status
+      }
+    };
+  }
+
   /**
    * Aprueba un repartidor pendiente
    */
   async approveDelivery(deliveryId: number, userRoles: string[], userCity?: number) {
     const isSuperAdmin = userRoles.includes('superadmin');
 
-    // Buscar el repartidor
     const delivery = await this.userRepository
       .createQueryBuilder('user')
       .innerJoinAndSelect('user.roles', 'role')
@@ -123,7 +186,6 @@ export class AdminService {
       throw new BadRequestException('El repartidor ya está aprobado');
     }
 
-    // Aprobar el repartidor
     delivery.delivery_status = 'approved';
     await this.userRepository.save(delivery);
 
@@ -144,7 +206,6 @@ export class AdminService {
   async rejectDelivery(deliveryId: number, userRoles: string[], userCity?: number) {
     const isSuperAdmin = userRoles.includes('superadmin');
 
-    // Buscar el repartidor
     const delivery = await this.userRepository
       .createQueryBuilder('user')
       .innerJoinAndSelect('user.roles', 'role')
@@ -163,7 +224,6 @@ export class AdminService {
       throw new BadRequestException('El repartidor ya está rechazado');
     }
 
-    // Rechazar el repartidor
     delivery.delivery_status = 'rejected';
     await this.userRepository.save(delivery);
 
@@ -178,3 +238,4 @@ export class AdminService {
     };
   }
 }
+

@@ -17,7 +17,20 @@ export class Product {
   @Column('text', { nullable: true })
   descripcion: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('text', { nullable: true })
+  imagen: string;
+
+  @Column({ length: 100, nullable: true })
+  categoria: string;
+
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value),
+    },
+  })
   precio: number;
 
   @Column()

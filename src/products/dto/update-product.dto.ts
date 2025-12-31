@@ -1,4 +1,5 @@
 import { IsString, IsNumber, IsOptional, IsBoolean, Min, MaxLength } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -25,6 +26,23 @@ export class UpdateProductDto {
   descripcion?: string;
 
   @ApiPropertyOptional({
+    description: 'URL de imagen del producto',
+    example: 'https://example.com/image.png'
+  })
+  @IsString({ message: 'La imagen debe ser una URL válida' })
+  @IsOptional()
+  imagen?: string;
+
+  @ApiPropertyOptional({
+    description: 'Categoría del producto',
+    example: 'Helados'
+  })
+  @IsString({ message: 'La categoría debe ser un texto válido' })
+  @MaxLength(100, { message: 'La categoría no puede exceder 100 caracteres' })
+  @IsOptional()
+  categoria?: string;
+
+  @ApiPropertyOptional({
     description: 'Precio del producto',
     example: 6.99,
     minimum: 0
@@ -32,6 +50,7 @@ export class UpdateProductDto {
   @IsNumber({}, { message: 'El precio debe ser un número' })
   @Min(0, { message: 'El precio no puede ser negativo' })
   @IsOptional()
+  @Type(() => Number)
   precio?: number;
 
   @ApiPropertyOptional({
@@ -42,6 +61,7 @@ export class UpdateProductDto {
   @IsNumber({}, { message: 'El stock debe ser un número' })
   @Min(0, { message: 'El stock no puede ser negativo' })
   @IsOptional()
+  @Type(() => Number)
   stock?: number;
 
   @ApiPropertyOptional({
@@ -50,5 +70,10 @@ export class UpdateProductDto {
   })
   @IsBoolean({ message: 'El estado de activación debe ser un booleano' })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   activo?: boolean;
 } 

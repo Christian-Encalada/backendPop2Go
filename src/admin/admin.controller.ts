@@ -25,8 +25,8 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   async getDashboardStats(@Request() req) {
-    const userRoles = req.user.roles?.map(role => role.nombre) || [];
-    const userCity = req.user.id_ciudad;
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
     
     return this.adminService.getDashboardStats(userRoles, userCity);
   }
@@ -41,10 +41,23 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   async getPendingDeliveries(@Request() req) {
-    const userRoles = req.user.roles?.map(role => role.nombre) || [];
-    const userCity = req.user.id_ciudad;
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
     
     return this.adminService.getPendingDeliveries(userRoles, userCity);
+  }
+
+  @Get('deliveries')
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Obtener lista de repartidores' })
+  @ApiResponse({ status: 200, description: 'Lista de repartidores obtenida exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
+  async getAllDeliveries(@Request() req) {
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
+    
+    return this.adminService.getAllDeliveries(userRoles, userCity);
   }
 
   /**
@@ -60,8 +73,8 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   @ApiResponse({ status: 404, description: 'Repartidor no encontrado' })
   async approveDelivery(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userRoles = req.user.roles?.map(role => role.nombre) || [];
-    const userCity = req.user.id_ciudad;
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
     
     return this.adminService.approveDelivery(id, userRoles, userCity);
   }
@@ -79,9 +92,24 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   @ApiResponse({ status: 404, description: 'Repartidor no encontrado' })
   async rejectDelivery(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userRoles = req.user.roles?.map(role => role.nombre) || [];
-    const userCity = req.user.id_ciudad;
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
     
     return this.adminService.rejectDelivery(id, userRoles, userCity);
+  }
+
+  @Patch('deliveries/:id/deactivate')
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Desactivar un repartidor' })
+  @ApiParam({ name: 'id', description: 'ID del repartidor a desactivar' })
+  @ApiResponse({ status: 200, description: 'Repartidor desactivado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
+  @ApiResponse({ status: 404, description: 'Repartidor no encontrado' })
+  async deactivateDelivery(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
+    
+    return this.adminService.deactivateDelivery(id, userRoles, userCity);
   }
 }

@@ -43,7 +43,19 @@ export class OrdersController {
     return this.ordersService.findAll(
       req.user.userId,
       req.user.roles,
-      req.user.ciudad
+      req.user.cityId
+    );
+  }
+
+  @Get('my-orders')
+  @ApiOperation({ summary: 'Obtener pedidos del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Lista de pedidos obtenida exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  findMyOrders(@Req() req) {
+    return this.ordersService.findAll(
+      req.user.userId,
+      req.user.roles,
+      req.user.cityId
     );
   }
 
@@ -63,7 +75,7 @@ export class OrdersController {
       id, 
       req.user.userId,
       req.user.roles,
-      req.user.ciudad
+      req.user.cityId
     );
   }
 
@@ -103,7 +115,27 @@ export class OrdersController {
       estado,
       req.user.userId,
       req.user.roles,
-      req.user.ciudad
+      req.user.cityId
     );
   }
-} 
+
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Cancelar un pedido' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiResponse({ status: 200, description: 'Pedido cancelado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos para modificar este pedido' })
+  @ApiResponse({ status: 404, description: 'Pedido no encontrado' })
+  cancel(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req
+  ) {
+    return this.ordersService.updateStatus(
+      id,
+      'cancelado',
+      req.user.userId,
+      req.user.roles,
+      req.user.cityId
+    );
+  }
+}
