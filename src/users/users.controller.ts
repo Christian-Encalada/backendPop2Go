@@ -51,7 +51,7 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   findAll(@Req() req) {
     return this.usersService.findAll(
-      req.user.ciudad,
+      req.user.cityId,
       req.user.roles
     );
   }
@@ -70,7 +70,7 @@ export class UsersController {
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req) {
     return this.usersService.findOne(
       id, 
-      req.user.ciudad,
+      req.user.cityId,
       req.user.roles
     );
   }
@@ -94,7 +94,7 @@ export class UsersController {
     return this.usersService.update(
       id, 
       updateUserDto, 
-      req.user.ciudad,
+      req.user.cityId,
       req.user.roles
     );
   }
@@ -113,7 +113,7 @@ export class UsersController {
   remove(@Param('id', ParseIntPipe) id: number, @Req() req) {
     return this.usersService.remove(
       id, 
-      req.user.ciudad,
+      req.user.cityId,
       req.user.roles
     );
   }

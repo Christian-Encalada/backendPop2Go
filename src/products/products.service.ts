@@ -60,12 +60,14 @@ export class ProductsService {
 
     return products.map(product => {
       const stockLocal = product.stockLocales[0];
+      const precioRaw = stockLocal?.precio_local ?? product.precio;
+      const precio = typeof precioRaw === 'string' ? parseFloat(precioRaw as any) : (precioRaw as number);
       return {
         ...product,
         stock: stockLocal ? stockLocal.stock : 0,
-        precio: stockLocal?.precio_local || product.precio,
+        precio,
         disponible: stockLocal ? stockLocal.activo : false,
-        stockLocales: undefined // Removemos la relación para limpiar la respuesta
+        stockLocales: undefined
       };
     });
   }

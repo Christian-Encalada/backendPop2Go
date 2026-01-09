@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe, Put, Query, ParseBoolPipe, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe, Put, Query, Patch } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -28,7 +28,18 @@ export class ProductsController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
+    return this.productsService.create(createProductDto).then(p => {
+      const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
+      return {
+        ...p,
+        id: p.id_producto,
+        name: p.nombre,
+        price: precioNum,
+        precio: precioNum,
+        stock: p.stock,
+        active: p.activo,
+      };
+    });
   }
 
   /**
@@ -41,13 +52,39 @@ export class ProductsController {
   @ApiQuery({ name: 'localId', required: false, type: Number, description: 'ID del local para obtener stock específico' })
   @ApiResponse({ status: 200, description: 'Lista de productos obtenida exitosamente' })
   findAll(
-    @Query('active', new ParseBoolPipe({ optional: true })) active?: boolean,
-    @Query('localId', new ParseIntPipe({ optional: true })) localId?: number
+    @Query('active') activeStr?: any,
+    @Query('localId') localId?: string
   ) {
-    if (localId) {
-      return this.productsService.findByLocal(localId, active);
+    let active: boolean | undefined;
+    if (activeStr === undefined) {
+      active = undefined;
+    } else if (typeof activeStr === 'string') {
+      const s = activeStr.trim().toLowerCase();
+      active = s === 'true' ? true : s === 'false' ? false : undefined;
+    } else if (typeof activeStr === 'boolean') {
+      active = activeStr;
     }
-    return this.productsService.findAll(active);
+
+    if (localId !== undefined) {
+      const id = parseInt(localId, 10);
+      if (!isNaN(id)) {
+        return this.productsService.findByLocal(id, active);
+      }
+    }
+    return this.productsService.findAll(active).then(products =>
+      products.map(p => {
+        const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
+        return {
+          ...p,
+          id: p.id_producto,
+          name: p.nombre,
+          price: precioNum,
+          precio: precioNum,
+          stock: p.stock,
+          active: p.activo,
+        };
+      })
+    );
   }
 
   /**
@@ -59,7 +96,18 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Producto encontrado' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productsService.findOne(id);
+    return this.productsService.findOne(id).then(p => {
+      const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
+      return {
+        ...p,
+        id: p.id_producto,
+        name: p.nombre,
+        price: precioNum,
+        precio: precioNum,
+        stock: p.stock,
+        active: p.activo,
+      };
+    });
   }
 
   /**
@@ -77,7 +125,18 @@ export class ProductsController {
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(id, updateProductDto);
+    return this.productsService.update(id, updateProductDto).then(p => {
+      const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
+      return {
+        ...p,
+        id: p.id_producto,
+        name: p.nombre,
+        price: precioNum,
+        precio: precioNum,
+        stock: p.stock,
+        active: p.activo,
+      };
+    });
   }
 
   /**

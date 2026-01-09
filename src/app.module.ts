@@ -13,6 +13,7 @@ import { AddressesModule } from './addresses/addresses.module';
 import { StoresModule } from './stores/stores.module';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
+import { CategoriesModule } from './categories/categories.module';
 
 /**
  * Módulo principal de la aplicación
@@ -43,6 +44,7 @@ import { AppController } from './app.controller';
     OrdersModule,
     AddressesModule,
     AdminModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
 })

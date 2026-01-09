@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminController } from './admin.controller';
+import { DeliveryController } from './delivery.controller';
 import { AdminService } from './admin.service';
 import { User } from '../users/entities/users.entity';
 import { Product } from '../products/entities/product.entity';
@@ -19,7 +20,7 @@ import { Role } from '../users/entities/role.entity';
       Role
     ])
   ],
-  controllers: [AdminController],
+  controllers: [AdminController, DeliveryController],
   providers: [AdminService],
   exports: [AdminService]
 })
