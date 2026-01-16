@@ -14,6 +14,7 @@ import { StoresModule } from './stores/stores.module';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { CategoriesModule } from './categories/categories.module';
+import { UploadModule } from './upload/upload.module';
 
 /**
  * Módulo principal de la aplicación
@@ -45,6 +46,7 @@ import { CategoriesModule } from './categories/categories.module';
     AddressesModule,
     AdminModule,
     CategoriesModule,
+    UploadModule,
   ],
   controllers: [AppController],
 })

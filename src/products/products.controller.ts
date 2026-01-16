@@ -16,6 +16,24 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   /**
+   * Mapea un producto con su categoría
+   */
+  private mapProductResponse(p: any) {
+    const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
+    return {
+      ...p,
+      id: p.id_producto,
+      name: p.nombre,
+      price: precioNum,
+      precio: precioNum,
+      stock: p.stock,
+      active: p.activo,
+      categoria: p.categoryRelation?.nombre || null,
+      categoryRelation: undefined, // Ocultar relación interna
+    };
+  }
+
+  /**
    * Crea un nuevo producto
    * Solo admin y superadmin pueden crear productos
    */
@@ -28,18 +46,7 @@ export class ProductsController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto).then(p => {
-      const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
-      return {
-        ...p,
-        id: p.id_producto,
-        name: p.nombre,
-        price: precioNum,
-        precio: precioNum,
-        stock: p.stock,
-        active: p.activo,
-      };
-    });
+    return this.productsService.create(createProductDto).then(p => this.mapProductResponse(p));
   }
 
   /**
@@ -72,18 +79,7 @@ export class ProductsController {
       }
     }
     return this.productsService.findAll(active).then(products =>
-      products.map(p => {
-        const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
-        return {
-          ...p,
-          id: p.id_producto,
-          name: p.nombre,
-          price: precioNum,
-          precio: precioNum,
-          stock: p.stock,
-          active: p.activo,
-        };
-      })
+      products.map(p => this.mapProductResponse(p))
     );
   }
 
@@ -96,18 +92,7 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Producto encontrado' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productsService.findOne(id).then(p => {
-      const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
-      return {
-        ...p,
-        id: p.id_producto,
-        name: p.nombre,
-        price: precioNum,
-        precio: precioNum,
-        stock: p.stock,
-        active: p.activo,
-      };
-    });
+    return this.productsService.findOne(id).then(p => this.mapProductResponse(p));
   }
 
   /**
@@ -125,18 +110,7 @@ export class ProductsController {
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(id, updateProductDto).then(p => {
-      const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio as any) : p.precio;
-      return {
-        ...p,
-        id: p.id_producto,
-        name: p.nombre,
-        price: precioNum,
-        precio: precioNum,
-        stock: p.stock,
-        active: p.activo,
-      };
-    });
+    return this.productsService.update(id, updateProductDto).then(p => this.mapProductResponse(p));
   }
 
   /**

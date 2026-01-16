@@ -35,7 +35,9 @@ export class ProductsService {
    * @returns Lista de productos
    */
   async findAll(onlyActive: boolean = false): Promise<Product[]> {
-    const options: any = {};
+    const options: any = {
+      relations: ['categoryRelation'], // Incluir relación con categoría
+    };
     
     if (onlyActive) {
       options.where = { activo: true };
@@ -80,6 +82,7 @@ export class ProductsService {
   async findOne(id: number): Promise<Product> {
     const product = await this.productRepository.findOne({
       where: { id_producto: id },
+      relations: ['categoryRelation'], // Incluir relación con categoría
     });
     
     if (!product) {
