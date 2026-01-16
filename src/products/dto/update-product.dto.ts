@@ -34,13 +34,13 @@ export class UpdateProductDto {
   imagen?: string;
 
   @ApiPropertyOptional({
-    description: 'Categoría del producto',
-    example: 'Helados'
+    description: 'ID de la categoría del producto',
+    example: 1
   })
-  @IsString({ message: 'La categoría debe ser un texto válido' })
-  @MaxLength(100, { message: 'La categoría no puede exceder 100 caracteres' })
+  @IsNumber({}, { message: 'El ID de categoría debe ser un número' })
   @IsOptional()
-  categoria?: string;
+  @Type(() => Number)
+  id_categoria?: number;
 
   @ApiPropertyOptional({
     description: 'Precio del producto',

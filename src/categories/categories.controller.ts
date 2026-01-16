@@ -1,13 +1,11 @@
 import { Controller, Get, Post, Body, Put, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { ProductsService } from '../products/products.service';
 import { CategoriesService } from './categories.service';
 
 @ApiTags('categories')
 @Controller('categories')
 export class CategoriesController {
   constructor(
-    private readonly productsService: ProductsService,
     private readonly categoriesService: CategoriesService,
   ) {}
 
@@ -19,32 +17,19 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Obtener categorías' })
   @ApiResponse({ status: 200, description: 'Lista de categorías' })
   async findAll() {
-    const products = await this.productsService.findAll();
-    const derivedMap = new Map<string, { id: number; name: string; slug: string }>();
-    products.forEach(p => {
-      if (p.categoria) {
-        const name = p.categoria;
-        const slug = this.slugify(name);
-        if (!derivedMap.has(slug)) {
-          const id = Array.from(slug).reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-          derivedMap.set(slug, { id, name, slug });
-        }
-      }
-    });
-
-    const derived = Array.from(derivedMap.values());
-    const persisted = (await this.categoriesService.findAll()).map(c => ({
+    // Solo devolver categorías reales de la base de datos
+    const categories = await this.categoriesService.findAll();
+    return categories.map(c => ({
       id: c.id_categoria,
       name: c.nombre,
       slug: this.slugify(c.nombre),
       descripcion: c.descripcion ?? undefined,
       imagen: c.imagen_url ?? undefined,
+      icono: c.icono ?? undefined,
+      color: c.color ?? undefined,
+      activo: c.activo ?? true,
+      orden: c.orden ?? 0,
     }));
-    const combined = [...persisted, ...derived];
-
-    // Unificar por slug
-    const unique = Array.from(new Map(combined.map(c => [c.slug, c])).values());
-    return unique;
   }
 
   @Get(':id')
@@ -59,6 +44,10 @@ export class CategoriesController {
       slug: this.slugify(cat.nombre),
       descripcion: cat.descripcion ?? undefined,
       imagen: cat.imagen_url ?? undefined,
+      icono: cat.icono ?? undefined,
+      color: cat.color ?? undefined,
+      activo: cat.activo ?? true,
+      orden: cat.orden ?? 0,
     };
   }
 
@@ -73,6 +62,10 @@ export class CategoriesController {
       slug: this.slugify(cat.nombre),
       descripcion: cat.descripcion ?? undefined,
       imagen: cat.imagen_url ?? undefined,
+      icono: cat.icono ?? undefined,
+      color: cat.color ?? undefined,
+      activo: cat.activo ?? true,
+      orden: cat.orden ?? 0,
     };
   }
 
@@ -88,6 +81,10 @@ export class CategoriesController {
       slug: this.slugify(cat.nombre),
       descripcion: cat.descripcion ?? undefined,
       imagen: cat.imagen_url ?? undefined,
+      icono: cat.icono ?? undefined,
+      color: cat.color ?? undefined,
+      activo: cat.activo ?? true,
+      orden: cat.orden ?? 0,
     };
   }
 

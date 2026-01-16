@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { OrderItem } from '../../orders/entities/order-item.entity';
 import { StockLocal } from './stock-local.entity';
+import { Category } from '../../categories/entities/category.entity';
 
 /**
  * Entidad para la tabla de productos
@@ -20,8 +21,8 @@ export class Product {
   @Column('text', { nullable: true })
   imagen: string;
 
-  @Column({ length: 100, nullable: true })
-  categoria: string;
+  @Column({ nullable: true })
+  id_categoria: number;
 
   @Column('decimal', {
     precision: 10,
@@ -40,6 +41,10 @@ export class Product {
   activo: boolean;
 
   // Relaciones
+  @ManyToOne(() => Category, { nullable: true })
+  @JoinColumn({ name: 'id_categoria' })
+  categoryRelation: Category;
+
   @OneToMany(() => OrderItem, orderItem => orderItem.product)
   orderItems: OrderItem[];
 
