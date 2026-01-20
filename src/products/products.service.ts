@@ -55,6 +55,7 @@ export class ProductsService {
   async findByLocal(localId: number, onlyActive: boolean = true): Promise<any[]> {
     const query = this.productRepository
       .createQueryBuilder('product')
+      .leftJoinAndSelect('product.categoryRelation', 'categoryRelation')
       .leftJoinAndSelect('product.stockLocales', 'stockLocal', 'stockLocal.id_local = :localId', { localId })
       .where('product.activo = :activo', { activo: onlyActive });
 
