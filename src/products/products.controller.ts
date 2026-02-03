@@ -118,13 +118,16 @@ export class ProductsController {
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
   async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    const localIdRaw = body?.localId ?? body?.id_local ?? body?.idLocal;
+    const hasLocalId = localIdRaw !== undefined && localIdRaw !== null && localIdRaw !== '';
+
     const updatePayload: UpdateProductDto = {};
     if (body?.nombre !== undefined) updatePayload.nombre = body.nombre;
     if (body?.descripcion !== undefined) updatePayload.descripcion = body.descripcion;
     if (body?.imagen !== undefined) updatePayload.imagen = body.imagen;
     if (body?.id_categoria !== undefined) updatePayload.id_categoria = body.id_categoria;
     if (body?.precio !== undefined) updatePayload.precio = body.precio;
-    if (body?.stock !== undefined) updatePayload.stock = body.stock;
+    if (body?.stock !== undefined && !hasLocalId) updatePayload.stock = body.stock;
     if (body?.activo !== undefined) updatePayload.activo = body.activo;
 
     const dto = plainToInstance(UpdateProductDto, updatePayload);
@@ -138,17 +141,19 @@ export class ProductsController {
 
     const product = await this.productsService.update(id, dto);
 
-    const localIdRaw = body?.localId ?? body?.id_local ?? body?.idLocal;
-    if (localIdRaw !== undefined && localIdRaw !== null && localIdRaw !== '') {
+    if (hasLocalId) {
       const localId = Number(localIdRaw);
       if (!Number.isFinite(localId)) {
         throw new BadRequestException('El ID del local debe ser un número válido');
       }
-      const stock = Number(body?.stock);
-      if (!Number.isFinite(stock)) {
-        throw new BadRequestException('El stock debe ser un número válido');
+      const quantity = Number(body?.stock);
+      if (!Number.isFinite(quantity)) {
+        throw new BadRequestException('La cantidad debe ser un número válido');
       }
-      await this.productsService.setStockLocal(id, localId, stock);
+      if (quantity < 0) {
+        throw new BadRequestException('La cantidad no puede ser negativa');
+      }
+      await this.productsService.updateStockLocal(id, localId, quantity);
     }
 
     return this.mapProductResponse(product);
