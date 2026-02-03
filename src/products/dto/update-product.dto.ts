@@ -65,6 +65,18 @@ export class UpdateProductDto {
   stock?: number;
 
   @ApiPropertyOptional({
+    description: 'ID del local para actualizar stock específico',
+    example: 1
+  })
+  @IsNumber({}, { message: 'El ID del local debe ser un número' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    return Number(value);
+  })
+  localId?: number;
+
+  @ApiPropertyOptional({
     description: 'Indica si el producto está activo y disponible para la venta',
     example: false
   })

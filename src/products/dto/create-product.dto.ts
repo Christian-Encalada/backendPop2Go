@@ -67,6 +67,19 @@ export class CreateProductDto {
   stock: number;
 
   @ApiProperty({
+    description: 'ID del local para asignar stock inicial',
+    example: 1,
+    required: false
+  })
+  @IsNumber({}, { message: 'El ID del local debe ser un número' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    return Number(value);
+  })
+  localId?: number;
+
+  @ApiProperty({
     description: 'Indica si el producto está activo y disponible para la venta',
     example: true,
     default: true,
