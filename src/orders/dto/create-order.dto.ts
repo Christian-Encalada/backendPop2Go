@@ -1,6 +1,14 @@
-import { IsArray, IsNotEmpty, IsNumber, ValidateNested, ArrayNotEmpty } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, ValidateNested, ArrayNotEmpty, IsEnum, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+/**
+ * Enum para los métodos de pago
+ */
+export enum PaymentMethod {
+  CASH = 'CASH',
+  TRANSFER = 'TRANSFER'
+}
 
 /**
  * DTO para los items de una orden
@@ -49,4 +57,21 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   productos: OrderItemDto[];
+
+  @ApiProperty({
+    description: 'Método de pago',
+    enum: PaymentMethod,
+    example: PaymentMethod.CASH
+  })
+  @IsEnum(PaymentMethod, { message: 'El método de pago debe ser CASH o TRANSFER' })
+  @IsNotEmpty({ message: 'El método de pago es requerido' })
+  metodo_pago: PaymentMethod;
+
+  @ApiPropertyOptional({
+    description: 'Monto en efectivo con el que pagará el cliente (solo para pago en efectivo)',
+    example: 50.00
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'El monto en efectivo debe ser un número' })
+  monto_efectivo?: number;
 } 
