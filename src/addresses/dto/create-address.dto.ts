@@ -1,39 +1,47 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsNumber, IsOptional } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 /**
  * DTO para crear una nueva dirección
  */
 export class CreateAddressDto {
   @ApiProperty({
-    description: 'Dirección completa',
-    example: 'Calle Principal #123, Colonia Centro'
+    description: "Dirección completa",
+    example: "Calle Principal #123, Colonia Centro",
   })
-  @IsString({ message: 'La dirección debe ser un texto válido' })
-  @IsNotEmpty({ message: 'La dirección es requerida' })
-  tbl_direccion: string;
+  @IsString({ message: "La dirección debe ser un texto válido" })
+  @IsNotEmpty({ message: "La dirección es requerida" })
+  direccion: string;
 
   @ApiPropertyOptional({
-    description: 'Referencias adicionales para ubicar la dirección',
-    example: 'Casa blanca con rejas negras, frente al parque'
+    description: "Referencias adicionales para ubicar la dirección",
+    example: "Casa blanca con rejas negras, frente al parque",
   })
-  @IsString({ message: 'La referencia debe ser un texto válido' })
+  @IsString({ message: "La referencia debe ser un texto válido" })
   @IsOptional()
-  tbl_referencia?: string;
+  referencia?: string;
 
   @ApiProperty({
-    description: 'ID de la ciudad donde se encuentra la dirección',
-    example: 1
+    description: "ID del local asociado a la dirección",
+    example: 1,
   })
-  @IsNumber({}, { message: 'El ID de ciudad debe ser un número' })
-  @IsNotEmpty({ message: 'La ciudad es requerida' })
-  id_ciudad: number;
+  @IsNumber({}, { message: "El ID de local debe ser un número" })
+  @IsNotEmpty({ message: "El local es requerido" })
+  id_local: number;
 
-  @ApiProperty({
-    description: 'ID del usuario al que pertenece la dirección',
-    example: 1
+  @ApiPropertyOptional({
+    description: "Latitud de la ubicación",
+    example: -0.1806532,
   })
-  @IsNumber({}, { message: 'El ID de usuario debe ser un número' })
-  @IsNotEmpty({ message: 'El usuario es requerido' })
-  tbl_id_usuario: number;
-} 
+  @IsNumber({}, { message: "La latitud debe ser un número válido" })
+  @IsOptional()
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    description: "Longitud de la ubicación",
+    example: -78.4678382,
+  })
+  @IsNumber({}, { message: "La longitud debe ser un número válido" })
+  @IsOptional()
+  longitude?: number;
+}

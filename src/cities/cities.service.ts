@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { City } from './entities/city.entity';
-import { CreateCityDto } from './dto/create-city.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { City } from "./entities/city.entity";
+import { CreateCityDto } from "./dto/create-city.dto";
 
 /**
  * Servicio para la gestión de ciudades
@@ -23,11 +27,13 @@ export class CitiesService {
   async create(createCityDto: CreateCityDto): Promise<City> {
     // Verificar si la ciudad ya existe
     const existingCity = await this.cityRepository.findOne({
-      where: { nombre: createCityDto.nombre }
+      where: { nombre: createCityDto.nombre },
     });
-    
+
     if (existingCity) {
-      throw new ConflictException(`La ciudad ${createCityDto.nombre} ya existe`);
+      throw new ConflictException(
+        `La ciudad ${createCityDto.nombre} ya existe`,
+      );
     }
 
     const newCity = this.cityRepository.create(createCityDto);
@@ -49,13 +55,13 @@ export class CitiesService {
    */
   async findOne(id: number): Promise<City> {
     const city = await this.cityRepository.findOne({
-      where: { id_ciudad: id }
+      where: { id_ciudad: id },
     });
-    
+
     if (!city) {
       throw new NotFoundException(`Ciudad con ID ${id} no encontrada`);
     }
-    
+
     return city;
   }
 
@@ -66,14 +72,42 @@ export class CitiesService {
    */
   async findByName(nombre: string): Promise<City> {
     const city = await this.cityRepository.findOne({
-      where: { nombre }
+      where: { nombre },
     });
-    
+
     if (!city) {
       throw new NotFoundException(`Ciudad ${nombre} no encontrada`);
     }
-    
+
     return city;
+  }
+
+  /**
+   * Actualiza una ciudad
+   * @param id ID de la ciudad a actualizar
+   * @param updateCityDto Datos actualizados de la ciudad
+   * @returns La ciudad actualizada
+   */
+  async update(id: number, updateCityDto: CreateCityDto): Promise<City> {
+    const city = await this.findOne(id);
+
+    // Verificar si ya existe otra ciudad con el mismo nombre
+    if (updateCityDto.nombre !== city.nombre) {
+      const existingCity = await this.cityRepository.findOne({
+        where: { nombre: updateCityDto.nombre },
+      });
+
+      if (existingCity) {
+        throw new ConflictException(
+          `Ya existe una ciudad con el nombre ${updateCityDto.nombre}`,
+        );
+      }
+    }
+
+    // Actualizar los campos
+    Object.assign(city, updateCityDto);
+
+    return this.cityRepository.save(city);
   }
 
   /**
@@ -85,4 +119,4 @@ export class CitiesService {
     const city = await this.findOne(id);
     return this.cityRepository.remove(city);
   }
-} 
+}

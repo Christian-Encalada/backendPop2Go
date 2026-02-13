@@ -1,11 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { User } from '../../users/entities/users.entity';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import { User } from "../../users/entities/users.entity";
 
 /**
  * Entidad para la tabla de ciudades
  * Representa las ciudades donde opera el sistema
  */
-@Entity('tbl_ciudades')
+@Entity("tbl_ciudades")
 export class City {
   @PrimaryGeneratedColumn()
   id_ciudad: number;

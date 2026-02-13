@@ -1,31 +1,59 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
-import { City } from '../../cities/entities/city.entity';
-import { Role } from './role.entity';
-import { Order } from '../../orders/entities/order.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  ManyToMany,
+  JoinTable,
+  OneToMany,
+} from "typeorm";
+import { City } from "../../cities/entities/city.entity";
+import { Role } from "./role.entity";
+import { Order } from "../../orders/entities/order.entity";
 
-@Entity('tbl_usuarios')
+@Entity("tbl_usuarios")
 export class User {
   @PrimaryGeneratedColumn()
-  tbl_id_usuario: number;
+  id_usuario: number;
 
   @Column({ length: 100 })
-  tbl_nombre: string;
+  nombre: string;
 
   @Column({ length: 100, unique: true })
-  tbl_correo: string;
+  correo: string;
 
-  @Column('text')
-  tbl_contrasena: string;
+  @Column("text")
+  contrasena: string;
 
   @Column({ length: 20, nullable: true })
-  tbl_telefono: string;
+  telefono: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  tbl_fecha_registro: Date;
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
+  fecha_registro: Date;
+
+  // Campos específicos para delivery
+  @Column({ type: "text", nullable: true })
+  profile_image: string;
+
+  @Column({ type: "text", nullable: true })
+  description: string;
+
+  @Column({ length: 100, nullable: true })
+  vehicle: string;
+
+  @Column({
+    type: "enum",
+    enum: ["pending", "approved", "rejected"],
+    enumName: "delivery_status_enum",
+    default: "pending",
+    nullable: true,
+  })
+  delivery_status: "pending" | "approved" | "rejected"; // Estado del delivery
 
   // Relaciones
   @ManyToOne(() => City)
-  @JoinColumn({ name: 'id_ciudad' })
+  @JoinColumn({ name: "id_ciudad" })
   city: City;
 
   @Column()
@@ -33,12 +61,12 @@ export class User {
 
   @ManyToMany(() => Role)
   @JoinTable({
-    name: 'tbl_usuario_roles',
-    joinColumn: { name: 'tbl_id_usuario' },
-    inverseJoinColumn: { name: 'tbl_id_rol' }
+    name: "tbl_usuario_roles",
+    joinColumn: { name: "id_usuario" },
+    inverseJoinColumn: { name: "id_rol" },
   })
   roles: Role[];
 
-  @OneToMany(() => Order, order => order.user)
+  @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
 }

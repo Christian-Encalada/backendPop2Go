@@ -1,14 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany } from 'typeorm';
-import { User } from './users.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany } from "typeorm";
+import { User } from "./users.entity";
 
-@Entity('tbl_roles')
+@Entity("tbl_roles")
 export class Role {
   @PrimaryGeneratedColumn()
-  tbl_id_rol: number;
+  id_rol: number;
 
   @Column({ length: 50, unique: true })
-  tbl_nombre: string; // 'cliente', 'repartidor', 'admin', 'superadmin'
+  nombre: string; // 'cliente', 'repartidor', 'admin', 'superadmin', 'cocina'
 
-  @ManyToMany(() => User, user => user.roles)
+  @ManyToMany(() => User, (user) => user.roles)
   users: User[];
 }
