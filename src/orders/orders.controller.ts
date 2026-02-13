@@ -9,8 +9,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } 
 /**
  * Controlador para la gestión de pedidos
  */
-@ApiTags('orders')
-@Controller('orders')
+@ApiTags("orders")
+@Controller("orders")
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class OrdersController {
@@ -22,12 +22,18 @@ export class OrdersController {
    */
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('cliente')
-  @ApiOperation({ summary: 'Crear un nuevo pedido' })
-  @ApiResponse({ status: 201, description: 'Pedido creado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos o producto sin stock suficiente' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
+  @Roles("cliente")
+  @ApiOperation({ summary: "Crear un nuevo pedido" })
+  @ApiResponse({ status: 201, description: "Pedido creado exitosamente" })
+  @ApiResponse({
+    status: 400,
+    description: "Datos inválidos o producto sin stock suficiente",
+  })
+  @ApiResponse({ status: 401, description: "No autorizado" })
+  @ApiResponse({
+    status: 403,
+    description: "Prohibido - No tiene permisos suficientes",
+  })
   create(@Body() createOrderDto: CreateOrderDto, @Req() req) {
     return this.ordersService.create(createOrderDto, req.user.userId);
   }
@@ -36,26 +42,32 @@ export class OrdersController {
    * Obtiene todos los pedidos según los permisos del usuario
    */
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los pedidos (según permisos)' })
-  @ApiResponse({ status: 200, description: 'Lista de pedidos obtenida exitosamente' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiOperation({ summary: "Obtener todos los pedidos (según permisos)" })
+  @ApiResponse({
+    status: 200,
+    description: "Lista de pedidos obtenida exitosamente",
+  })
+  @ApiResponse({ status: 401, description: "No autorizado" })
   findAll(@Req() req) {
     return this.ordersService.findAll(
       req.user.userId,
       req.user.roles,
-      req.user.cityId
+      req.user.cityId,
     );
   }
 
-  @Get('my-orders')
-  @ApiOperation({ summary: 'Obtener pedidos del usuario autenticado' })
-  @ApiResponse({ status: 200, description: 'Lista de pedidos obtenida exitosamente' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @Get("my-orders")
+  @ApiOperation({ summary: "Obtener pedidos del usuario autenticado" })
+  @ApiResponse({
+    status: 200,
+    description: "Lista de pedidos obtenida exitosamente",
+  })
+  @ApiResponse({ status: 401, description: "No autorizado" })
   findMyOrders(@Req() req) {
     return this.ordersService.findAll(
       req.user.userId,
       req.user.roles,
-      req.user.cityId
+      req.user.cityId,
     );
   }
 
@@ -63,19 +75,22 @@ export class OrdersController {
    * Obtiene un pedido específico por ID
    * Verifica permisos según rol del usuario
    */
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener un pedido por ID (según permisos)' })
-  @ApiParam({ name: 'id', description: 'ID del pedido' })
-  @ApiResponse({ status: 200, description: 'Pedido encontrado' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos para ver este pedido' })
-  @ApiResponse({ status: 404, description: 'Pedido no encontrado' })
-  findOne(@Param('id', ParseIntPipe) id: number, @Req() req) {
+  @Get(":id")
+  @ApiOperation({ summary: "Obtener un pedido por ID (según permisos)" })
+  @ApiParam({ name: "id", description: "ID del pedido" })
+  @ApiResponse({ status: 200, description: "Pedido encontrado" })
+  @ApiResponse({ status: 401, description: "No autorizado" })
+  @ApiResponse({
+    status: 403,
+    description: "Prohibido - No tiene permisos para ver este pedido",
+  })
+  @ApiResponse({ status: 404, description: "Pedido no encontrado" })
+  findOne(@Param("id", ParseIntPipe) id: number, @Req() req) {
     return this.ordersService.findOne(
-      id, 
+      id,
       req.user.userId,
       req.user.roles,
-      req.user.cityId
+      req.user.cityId,
     );
   }
 
@@ -83,14 +98,14 @@ export class OrdersController {
    * Actualiza el estado de un pedido
    * Diferentes roles tienen diferentes permisos
    */
-  @Patch(':id/status')
+  @Patch(":id/status")
   @UseGuards(RolesGuard)
-  @Roles('admin', 'superadmin', 'repartidor', 'cocina')
-  @ApiOperation({ summary: 'Actualizar el estado de un pedido' })
-  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @Roles("admin", "superadmin", "repartidor", "cocina")
+  @ApiOperation({ summary: "Actualizar el estado de un pedido" })
+  @ApiParam({ name: "id", description: "ID del pedido" })
   @ApiBody({
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
         estado: {
           type: 'string',
@@ -100,42 +115,48 @@ export class OrdersController {
       }
     }
   })
-  @ApiResponse({ status: 200, description: 'Estado actualizado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Estado inválido o no se puede cambiar a ese estado' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos para modificar este pedido' })
-  @ApiResponse({ status: 404, description: 'Pedido no encontrado' })
+  @ApiResponse({ status: 200, description: "Estado actualizado exitosamente" })
+  @ApiResponse({
+    status: 400,
+    description: "Estado inválido o no se puede cambiar a ese estado",
+  })
+  @ApiResponse({ status: 401, description: "No autorizado" })
+  @ApiResponse({
+    status: 403,
+    description: "Prohibido - No tiene permisos para modificar este pedido",
+  })
+  @ApiResponse({ status: 404, description: "Pedido no encontrado" })
   updateStatus(
-    @Param('id', ParseIntPipe) id: number, 
-    @Body('estado') estado: string,
-    @Req() req
+    @Param("id", ParseIntPipe) id: number,
+    @Body("estado") estado: string,
+    @Req() req,
   ) {
     return this.ordersService.updateStatus(
       id,
       estado,
       req.user.userId,
       req.user.roles,
-      req.user.cityId
+      req.user.cityId,
     );
   }
 
-  @Patch(':id/cancel')
-  @ApiOperation({ summary: 'Cancelar un pedido' })
-  @ApiParam({ name: 'id', description: 'ID del pedido' })
-  @ApiResponse({ status: 200, description: 'Pedido cancelado exitosamente' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos para modificar este pedido' })
-  @ApiResponse({ status: 404, description: 'Pedido no encontrado' })
-  cancel(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req
-  ) {
+  @Patch(":id/cancel")
+  @ApiOperation({ summary: "Cancelar un pedido" })
+  @ApiParam({ name: "id", description: "ID del pedido" })
+  @ApiResponse({ status: 200, description: "Pedido cancelado exitosamente" })
+  @ApiResponse({ status: 401, description: "No autorizado" })
+  @ApiResponse({
+    status: 403,
+    description: "Prohibido - No tiene permisos para modificar este pedido",
+  })
+  @ApiResponse({ status: 404, description: "Pedido no encontrado" })
+  cancel(@Param("id", ParseIntPipe) id: number, @Req() req) {
     return this.ordersService.updateStatus(
       id,
-      'cancelado',
+      "cancelado",
       req.user.userId,
       req.user.roles,
-      req.user.cityId
+      req.user.cityId,
     );
   }
 
@@ -192,11 +213,14 @@ export class OrdersController {
   /**
    * Obtiene pedidos disponibles para delivery (en estado preparando)
    */
-  @Get('delivery/available')
+  @Get("delivery/available")
   @UseGuards(RolesGuard)
-  @Roles('repartidor')
-  @ApiOperation({ summary: 'Obtener pedidos disponibles para delivery' })
-  @ApiResponse({ status: 200, description: 'Lista de pedidos disponibles para delivery' })
+  @Roles("repartidor")
+  @ApiOperation({ summary: "Obtener pedidos disponibles para delivery" })
+  @ApiResponse({
+    status: 200,
+    description: "Lista de pedidos disponibles para delivery",
+  })
   getAvailableForDelivery(@Req() req) {
     return this.ordersService.findAvailableForDelivery(req.user.userId, req.user.cityId);
   }
@@ -204,7 +228,7 @@ export class OrdersController {
   /**
    * Delivery acepta un pedido (preparando -> asignado)
    */
-  @Patch(':id/delivery-accept')
+  @Patch(":id/delivery-accept")
   @UseGuards(RolesGuard)
   @Roles('repartidor')
   @ApiOperation({ summary: 'Delivery acepta un pedido' })
@@ -217,11 +241,11 @@ export class OrdersController {
   /**
    * Obtiene pedidos asignados a este delivery
    */
-  @Get('delivery/my-orders')
+  @Get("delivery/my-orders")
   @UseGuards(RolesGuard)
-  @Roles('repartidor')
-  @ApiOperation({ summary: 'Obtener pedidos asignados a este delivery' })
-  @ApiResponse({ status: 200, description: 'Lista de pedidos del delivery' })
+  @Roles("repartidor")
+  @ApiOperation({ summary: "Obtener pedidos asignados a este delivery" })
+  @ApiResponse({ status: 200, description: "Lista de pedidos del delivery" })
   getDeliveryOrders(@Req() req) {
     return this.ordersService.findAssignedForDelivery(req.user.userId);
   }

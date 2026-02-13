@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { UploadController } from './upload.controller';
-import { UploadService } from './upload.service';
-import { CloudinaryProvider } from './cloudinary.provider';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { UploadController } from "./upload.controller";
+import { UploadService } from "./upload.service";
+import { CloudinaryProvider } from "./cloudinary.provider";
 
 @Module({
   imports: [ConfigModule],

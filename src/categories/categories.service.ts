@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Category } from './entities/category.entity';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Category } from "./entities/category.entity";
 
 @Injectable()
 export class CategoriesService {
@@ -11,7 +15,7 @@ export class CategoriesService {
   ) {}
 
   private slugify(s: string): string {
-    return s.toLowerCase().trim().replace(/\s+/g, '-');
+    return s.toLowerCase().trim().replace(/\s+/g, "-");
   }
 
   async findAll(): Promise<Category[]> {
@@ -19,17 +23,20 @@ export class CategoriesService {
   }
 
   async findOne(id: number): Promise<Category> {
-    const cat = await this.categoryRepository.findOne({ where: { id_categoria: id } });
-    if (!cat) throw new NotFoundException('Categoría no encontrada');
+    const cat = await this.categoryRepository.findOne({
+      where: { id_categoria: id },
+    });
+    if (!cat) throw new NotFoundException("Categoría no encontrada");
     return cat;
   }
 
   async create(body: any): Promise<Category> {
     const nombre: string = body.name ?? body.nombre;
-    if (!nombre) throw new ConflictException('El nombre es requerido');
+    if (!nombre) throw new ConflictException("El nombre es requerido");
 
     const exists = await this.categoryRepository.findOne({ where: { nombre } });
-    if (exists) throw new ConflictException('Ya existe una categoría con este nombre');
+    if (exists)
+      throw new ConflictException("Ya existe una categoría con este nombre");
 
     const entity = this.categoryRepository.create({
       nombre,
@@ -49,8 +56,13 @@ export class CategoriesService {
     if (nombre) {
       // Verificar duplicado de nombre si cambia
       if (nombre !== cat.nombre) {
-        const exists = await this.categoryRepository.findOne({ where: { nombre } });
-        if (exists) throw new ConflictException('Ya existe una categoría con este nombre');
+        const exists = await this.categoryRepository.findOne({
+          where: { nombre },
+        });
+        if (exists)
+          throw new ConflictException(
+            "Ya existe una categoría con este nombre",
+          );
       }
       cat.nombre = nombre;
     }

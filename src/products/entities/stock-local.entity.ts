@@ -1,13 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from 'typeorm';
-import { Product } from './product.entity';
-import { Store } from '../../stores/entities/store.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Unique,
+} from "typeorm";
+import { Product } from "./product.entity";
+import { Store } from "../../stores/entities/store.entity";
 
 /**
  * Entidad para la tabla de stock por local
  * Representa el stock específico de cada producto en cada local
  */
-@Entity('tbl_stock_local')
-@Unique(['id_producto', 'id_local']) // Un producto solo puede tener un registro por local
+@Entity("tbl_stock_local")
+@Unique(["id_producto", "id_local"]) // Un producto solo puede tener un registro por local
 export class StockLocal {
   @PrimaryGeneratedColumn()
   id_stock_local: number;
@@ -15,13 +22,14 @@ export class StockLocal {
   @Column()
   stock: number;
 
-  @Column('decimal', {
+  @Column("decimal", {
     precision: 10,
     scale: 2,
     nullable: true,
     transformer: {
       to: (value: number | null) => value,
-      from: (value: string | null) => (value === null ? null : parseFloat(value)),
+      from: (value: string | null) =>
+        value === null ? null : parseFloat(value),
     },
   })
   precio_local: number;
@@ -29,19 +37,19 @@ export class StockLocal {
   @Column({ default: true })
   activo: boolean;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   fecha_actualizacion: Date;
 
   // Relaciones
-  @ManyToOne(() => Product, product => product.stockLocales)
-  @JoinColumn({ name: 'id_producto' })
+  @ManyToOne(() => Product, (product) => product.stockLocales)
+  @JoinColumn({ name: "id_producto" })
   product: Product;
 
   @Column()
   id_producto: number;
 
   @ManyToOne(() => Store)
-  @JoinColumn({ name: 'id_local' })
+  @JoinColumn({ name: "id_local" })
   store: Store;
 
   @Column()

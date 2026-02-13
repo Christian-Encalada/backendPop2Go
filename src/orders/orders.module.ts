@@ -1,15 +1,15 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrdersService } from './orders.service';
-import { OrdersController } from './orders.controller';
-import { Order } from './entities/order.entity';
-import { OrderItem } from './entities/order-item.entity';
-import { ProductsModule } from '../products/products.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { OrdersService } from "./orders.service";
+import { OrdersController } from "./orders.controller";
+import { Order } from "./entities/order.entity";
+import { OrderItem } from "./entities/order-item.entity";
+import { ProductsModule } from "../products/products.module";
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DeliveryOrdersController } from './delivery-orders.controller';
 import { User } from '../users/entities/users.entity';
 import { KitchenOrdersController } from './kitchen-orders.controller';
-import { AddressesModule } from '../addresses/addresses.module';
+import { AddressesModule } from "../addresses/addresses.module";
 
 /**
  * Módulo de Pedidos
@@ -26,4 +26,4 @@ import { AddressesModule } from '../addresses/addresses.module';
   providers: [OrdersService],
   exports: [OrdersService],
 })
-export class OrdersModule {} 
+export class OrdersModule {}

@@ -1,5 +1,5 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsOptional } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 /**
  * DTO para actualizar una dirección existente
@@ -7,42 +7,42 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
  */
 export class UpdateAddressDto {
   @ApiPropertyOptional({
-    description: 'Dirección completa',
-    example: 'Calle Principal #123, Colonia Centro'
+    description: "Dirección completa",
+    example: "Calle Principal #123, Colonia Centro",
   })
-  @IsString({ message: 'La dirección debe ser un texto válido' })
+  @IsString({ message: "La dirección debe ser un texto válido" })
   @IsOptional()
   direccion?: string;
 
   @ApiPropertyOptional({
-    description: 'Referencias adicionales para ubicar la dirección',
-    example: 'Casa blanca con rejas negras, frente al parque'
+    description: "Referencias adicionales para ubicar la dirección",
+    example: "Casa blanca con rejas negras, frente al parque",
   })
-  @IsString({ message: 'La referencia debe ser un texto válido' })
+  @IsString({ message: "La referencia debe ser un texto válido" })
   @IsOptional()
   referencia?: string;
 
   @ApiPropertyOptional({
-    description: 'ID del local asociado a la dirección',
-    example: 1
+    description: "ID del local asociado a la dirección",
+    example: 1,
   })
-  @IsNumber({}, { message: 'El ID del local debe ser un número' })
+  @IsNumber({}, { message: "El ID del local debe ser un número" })
   @IsOptional()
   id_local?: number;
 
   @ApiPropertyOptional({
-    description: 'Latitud de la ubicación',
-    example: -0.1806532
+    description: "Latitud de la ubicación",
+    example: -0.1806532,
   })
-  @IsNumber({}, { message: 'La latitud debe ser un número válido' })
+  @IsNumber({}, { message: "La latitud debe ser un número válido" })
   @IsOptional()
   latitude?: number;
 
   @ApiPropertyOptional({
-    description: 'Longitud de la ubicación',
-    example: -78.4678382
+    description: "Longitud de la ubicación",
+    example: -78.4678382,
   })
-  @IsNumber({}, { message: 'La longitud debe ser un número válido' })
+  @IsNumber({}, { message: "La longitud debe ser un número válido" })
   @IsOptional()
   longitude?: number;
 }
