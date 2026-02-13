@@ -18,7 +18,7 @@ export class OrderItem {
   precio_unitario: number;
 
   // Relaciones
-  @ManyToOne(() => Order, order => order.orderItems)
+  @ManyToOne(() => Order, order => order.orderItems, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_pedido' })
   order: Order;
 

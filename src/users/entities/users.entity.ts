@@ -42,6 +42,12 @@ export class User {
   })
   delivery_status: 'pending' | 'approved' | 'rejected'; // Estado del delivery
 
+  @Column({ type: 'boolean', default: false })
+  is_working: boolean; // Si el delivery está activo/trabajando
+
+  @Column({ type: 'text', nullable: true })
+  expo_push_token: string; // Token para notificaciones push
+
   // Relaciones
   @ManyToOne(() => City)
   @JoinColumn({ name: 'id_ciudad' })

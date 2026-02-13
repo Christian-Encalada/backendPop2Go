@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ParseIntPipe, Delete } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -94,7 +94,7 @@ export class OrdersController {
       properties: {
         estado: {
           type: 'string',
-          enum: ['pendiente', 'en_camino', 'entregado', 'cancelado'],
+          enum: ['nuevo', 'preparando', 'asignado', 'listo_para_recoger', 'recogido', 'en_camino', 'entregado', 'cancelado', 'pendiente'],
           description: 'Nuevo estado del pedido'
         }
       }
@@ -137,5 +137,25 @@ export class OrdersController {
       req.user.roles,
       req.user.cityId
     );
+  }
+
+  /**
+   * Elimina un pedido (solo para admins)
+   * Los items del pedido se eliminan automáticamente
+   */
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Eliminar un pedido (solo administradores)' })
+  @ApiParam({ name: 'id', description: 'ID del pedido a eliminar' })
+  @ApiResponse({ status: 200, description: 'Pedido eliminado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - Solo administradores pueden eliminar pedidos' })
+  @ApiResponse({ status: 404, description: 'Pedido no encontrado' })
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req
+  ) {
+    return this.ordersService.remove(id, req.user.userId, req.user.roles);
   }
 }
