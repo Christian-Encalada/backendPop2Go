@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ProductsService } from './products.service';
-import { ProductsController } from './products.controller';
-import { Product } from './entities/product.entity';
-import { StockLocal } from './entities/stock-local.entity';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { ProductsService } from "./products.service";
+import { ProductsController } from "./products.controller";
+import { Product } from "./entities/product.entity";
+import { StockLocal } from "./entities/stock-local.entity";
 
 /**
  * Módulo de Productos

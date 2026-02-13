@@ -1,25 +1,32 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { CategoriesService } from './categories.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
+  ParseIntPipe,
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
+import { CategoriesService } from "./categories.service";
 
-@ApiTags('categories')
-@Controller('categories')
+@ApiTags("categories")
+@Controller("categories")
 export class CategoriesController {
-  constructor(
-    private readonly categoriesService: CategoriesService,
-  ) {}
+  constructor(private readonly categoriesService: CategoriesService) {}
 
   private slugify(s: string): string {
-    return s.toLowerCase().trim().replace(/\s+/g, '-');
+    return s.toLowerCase().trim().replace(/\s+/g, "-");
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener categorías' })
-  @ApiResponse({ status: 200, description: 'Lista de categorías' })
+  @ApiOperation({ summary: "Obtener categorías" })
+  @ApiResponse({ status: 200, description: "Lista de categorías" })
   async findAll() {
     // Solo devolver categorías reales de la base de datos
     const categories = await this.categoriesService.findAll();
-    return categories.map(c => ({
+    return categories.map((c) => ({
       id: c.id_categoria,
       name: c.nombre,
       slug: this.slugify(c.nombre),
@@ -32,11 +39,11 @@ export class CategoriesController {
     }));
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener una categoría por ID' })
-  @ApiParam({ name: 'id', description: 'ID de la categoría' })
+  @Get(":id")
+  @ApiOperation({ summary: "Obtener una categoría por ID" })
+  @ApiParam({ name: "id", description: "ID de la categoría" })
   @ApiResponse({ status: 200 })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
+  async findOne(@Param("id", ParseIntPipe) id: number) {
     const cat = await this.categoriesService.findOne(id);
     return {
       id: cat.id_categoria,
@@ -52,7 +59,7 @@ export class CategoriesController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Crear categoría' })
+  @ApiOperation({ summary: "Crear categoría" })
   @ApiResponse({ status: 201 })
   async create(@Body() body: any) {
     const cat = await this.categoriesService.create(body);
@@ -69,11 +76,11 @@ export class CategoriesController {
     };
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: 'Actualizar categoría' })
-  @ApiParam({ name: 'id', description: 'ID de la categoría' })
+  @Put(":id")
+  @ApiOperation({ summary: "Actualizar categoría" })
+  @ApiParam({ name: "id", description: "ID de la categoría" })
   @ApiResponse({ status: 200 })
-  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  async update(@Param("id", ParseIntPipe) id: number, @Body() body: any) {
     const cat = await this.categoriesService.update(id, body);
     return {
       id: cat.id_categoria,
@@ -88,11 +95,11 @@ export class CategoriesController {
     };
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar categoría' })
-  @ApiParam({ name: 'id', description: 'ID de la categoría' })
+  @Delete(":id")
+  @ApiOperation({ summary: "Eliminar categoría" })
+  @ApiParam({ name: "id", description: "ID de la categoría" })
   @ApiResponse({ status: 200 })
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  async remove(@Param("id", ParseIntPipe) id: number) {
     await this.categoriesService.remove(id);
     return { deleted: true };
   }

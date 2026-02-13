@@ -1,7 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany } from 'typeorm';
-import { User } from './users.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany } from "typeorm";
+import { User } from "./users.entity";
 
-@Entity('tbl_roles')
+@Entity("tbl_roles")
 export class Role {
   @PrimaryGeneratedColumn()
   id_rol: number;
@@ -9,6 +9,6 @@ export class Role {
   @Column({ length: 50, unique: true })
   nombre: string; // 'cliente', 'repartidor', 'admin', 'superadmin', 'cocina'
 
-  @ManyToMany(() => User, user => user.roles)
+  @ManyToMany(() => User, (user) => user.roles)
   users: User[];
 }

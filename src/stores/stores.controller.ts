@@ -8,12 +8,12 @@ import {
   Delete,
   ParseIntPipe,
   Query,
-} from '@nestjs/common';
-import { StoresService } from './stores.service';
-import { CreateStoreDto } from './dto/create-store.dto';
-import { UpdateStoreDto } from './dto/update-store.dto';
+} from "@nestjs/common";
+import { StoresService } from "./stores.service";
+import { CreateStoreDto } from "./dto/create-store.dto";
+import { UpdateStoreDto } from "./dto/update-store.dto";
 
-@Controller('locales')
+@Controller("locales")
 export class StoresController {
   constructor(private readonly storesService: StoresService) {}
 
@@ -23,37 +23,37 @@ export class StoresController {
   }
 
   @Get()
-  findAll(@Query('cityId') cityId?: string) {
+  findAll(@Query("cityId") cityId?: string) {
     if (cityId) {
       return this.storesService.findByCity(parseInt(cityId));
     }
     return this.storesService.findAll();
   }
 
-  @Get('by-city/:id_ciudad')
-  findByCity(@Param('id_ciudad', ParseIntPipe) id_ciudad: number) {
+  @Get("by-city/:id_ciudad")
+  findByCity(@Param("id_ciudad", ParseIntPipe) id_ciudad: number) {
     return this.storesService.findByCity(id_ciudad);
   }
 
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  @Get(":id")
+  findOne(@Param("id", ParseIntPipe) id: number) {
     return this.storesService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(":id")
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param("id", ParseIntPipe) id: number,
     @Body() updateStoreDto: UpdateStoreDto,
   ) {
     return this.storesService.update(id, updateStoreDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  @Delete(":id")
+  remove(@Param("id", ParseIntPipe) id: number) {
     return this.storesService.remove(id);
   }
 
-  @Post('seed')
+  @Post("seed")
   seedStores() {
     return this.storesService.seedStores();
   }

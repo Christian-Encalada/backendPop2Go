@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { CitiesService } from './cities.service';
-import { CitiesController } from './cities.controller';
-import { City } from './entities/city.entity';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { CitiesService } from "./cities.service";
+import { CitiesController } from "./cities.controller";
+import { City } from "./entities/city.entity";
 
 /**
  * Módulo de Ciudades
@@ -14,4 +14,4 @@ import { City } from './entities/city.entity';
   providers: [CitiesService],
   exports: [CitiesService],
 })
-export class CitiesModule {} 
+export class CitiesModule {}

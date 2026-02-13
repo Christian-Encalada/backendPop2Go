@@ -1,13 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
-import { OrderItem } from '../../orders/entities/order-item.entity';
-import { StockLocal } from './stock-local.entity';
-import { Category } from '../../categories/entities/category.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+import { OrderItem } from "../../orders/entities/order-item.entity";
+import { StockLocal } from "./stock-local.entity";
+import { Category } from "../../categories/entities/category.entity";
 
 /**
  * Entidad para la tabla de productos
  * Representa los productos disponibles en el sistema
  */
-@Entity('tbl_productos')
+@Entity("tbl_productos")
 export class Product {
   @PrimaryGeneratedColumn()
   id_producto: number;
@@ -15,16 +22,16 @@ export class Product {
   @Column({ length: 100 })
   nombre: string;
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   descripcion: string;
 
-  @Column('text', { nullable: true })
+  @Column("text", { nullable: true })
   imagen: string;
 
   @Column({ nullable: true })
   id_categoria: number;
 
-  @Column('decimal', {
+  @Column("decimal", {
     precision: 10,
     scale: 2,
     transformer: {
@@ -42,12 +49,12 @@ export class Product {
 
   // Relaciones
   @ManyToOne(() => Category, { nullable: true })
-  @JoinColumn({ name: 'id_categoria' })
+  @JoinColumn({ name: "id_categoria" })
   categoryRelation: Category;
 
-  @OneToMany(() => OrderItem, orderItem => orderItem.product)
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
   orderItems: OrderItem[];
 
-  @OneToMany(() => StockLocal, stockLocal => stockLocal.product)
+  @OneToMany(() => StockLocal, (stockLocal) => stockLocal.product)
   stockLocales: StockLocal[];
 }

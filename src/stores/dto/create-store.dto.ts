@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsNotEmpty, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsNotEmpty,
+  MaxLength,
+} from "class-validator";
 
 export class CreateStoreDto {
   @IsString()
