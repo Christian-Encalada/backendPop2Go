@@ -162,34 +162,35 @@ export class OrdersController {
   // ========== ENDPOINTS DE COCINA ==========
 
   /**
-   * Obtiene pedidos pendientes para cocina
+   * Cocina confirma un pedido (nuevo/pendiente -> preparando)
    */
-  @Get('kitchen/pending')
+  @Patch(':id/kitchen-confirm')
   @UseGuards(RolesGuard)
   @Roles('cocina', 'admin', 'superadmin')
-  @ApiOperation({ summary: 'Obtener pedidos pendientes para cocina' })
-  @ApiResponse({ status: 200, description: 'Lista de pedidos pendientes para cocina' })
-  getKitchenOrders(@Req() req) {
-    return this.ordersService.findKitchenOrders(req.user.cityId);
+  @ApiOperation({ summary: 'Cocina confirma un pedido' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiResponse({ status: 200, description: 'Pedido confirmado por cocina' })
+  kitchenConfirm(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.ordersService.kitchenConfirm(id, req.user.userId, req.user.cityId);
   }
 
   /**
-   * Cocina acepta un pedido
+   * Cocina marca pedido como listo para recoger (asignado -> listo_para_recoger)
    */
-  @Patch(':id/kitchen-accept')
+  @Patch(':id/kitchen-ready')
   @UseGuards(RolesGuard)
   @Roles('cocina', 'admin', 'superadmin')
-  @ApiOperation({ summary: 'Cocina acepta un pedido' })
+  @ApiOperation({ summary: 'Cocina marca pedido listo para recoger' })
   @ApiParam({ name: 'id', description: 'ID del pedido' })
-  @ApiResponse({ status: 200, description: 'Pedido aceptado por cocina' })
-  kitchenAccept(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.kitchenAcceptOrder(id);
+  @ApiResponse({ status: 200, description: 'Pedido marcado como listo para recoger' })
+  kitchenMarkReady(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.ordersService.kitchenMarkReady(id, req.user.userId, req.user.cityId);
   }
 
   // ========== ENDPOINTS DE DELIVERY ==========
 
   /**
-   * Obtiene pedidos disponibles para delivery (aceptados por cocina)
+   * Obtiene pedidos disponibles para delivery (en estado preparando)
    */
   @Get('delivery/available')
   @UseGuards(RolesGuard)
@@ -197,11 +198,11 @@ export class OrdersController {
   @ApiOperation({ summary: 'Obtener pedidos disponibles para delivery' })
   @ApiResponse({ status: 200, description: 'Lista de pedidos disponibles para delivery' })
   getAvailableForDelivery(@Req() req) {
-    return this.ordersService.findAvailableForDelivery(req.user.cityId);
+    return this.ordersService.findAvailableForDelivery(req.user.userId, req.user.cityId);
   }
 
   /**
-   * Delivery acepta un pedido
+   * Delivery acepta un pedido (preparando -> asignado)
    */
   @Patch(':id/delivery-accept')
   @UseGuards(RolesGuard)
@@ -210,7 +211,7 @@ export class OrdersController {
   @ApiParam({ name: 'id', description: 'ID del pedido' })
   @ApiResponse({ status: 200, description: 'Pedido asignado al delivery' })
   deliveryAccept(@Param('id', ParseIntPipe) id: number, @Req() req) {
-    return this.ordersService.deliveryAcceptOrder(id, req.user.userId);
+    return this.ordersService.acceptOrder(id, req.user.userId, req.user.cityId);
   }
 
   /**
@@ -222,6 +223,35 @@ export class OrdersController {
   @ApiOperation({ summary: 'Obtener pedidos asignados a este delivery' })
   @ApiResponse({ status: 200, description: 'Lista de pedidos del delivery' })
   getDeliveryOrders(@Req() req) {
-    return this.ordersService.findDeliveryOrders(req.user.userId);
+    return this.ordersService.findAssignedForDelivery(req.user.userId);
+  }
+
+  /**
+   * Delivery avanza el estado del pedido
+   */
+  @Patch(':id/delivery-advance')
+  @UseGuards(RolesGuard)
+  @Roles('repartidor')
+  @ApiOperation({ summary: 'Delivery avanza el estado del pedido' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['recogido', 'en_camino', 'entregado'],
+          description: 'Siguiente estado del pedido'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 200, description: 'Estado del pedido actualizado' })
+  deliveryAdvance(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: 'recogido' | 'en_camino' | 'entregado',
+    @Req() req
+  ) {
+    return this.ordersService.advanceDeliveryStatus(id, status, req.user.userId, req.user.cityId);
   }
 }

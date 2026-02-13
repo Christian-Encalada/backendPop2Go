@@ -72,7 +72,7 @@ export class OrdersService {
       const newOrder = this.orderRepository.create({
         id_usuario: userId,
         id_direccion: createOrderDto.id_direccion,
-        estado: 'en_cocina',
+        estado: 'nuevo',
         total: 0, // Se calculará después
         metodo_pago: createOrderDto.metodo_pago,
         monto_efectivo: createOrderDto.monto_efectivo,
@@ -356,19 +356,15 @@ export class OrdersService {
 
     try {
       // Lock pessimista para evitar que 2 repartidores acepten al mismo tiempo
-      const order = await queryRunner.manager.findOne(Order, {
-        where: { id_pedido: orderId },
-        relations: ['address', 'address.store'],
-        lock: { mode: 'pessimistic_write' },
-      });
+      // Primero bloquear solo la orden (sin JOINs para evitar error de PostgreSQL)
+      const order = await queryRunner.manager
+        .createQueryBuilder(Order, 'order')
+        .setLock('pessimistic_write')
+        .where('order.id_pedido = :orderId', { orderId })
+        .getOne();
 
       if (!order) throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
       if (order.id_repartidor) throw new ConflictException('Este pedido ya fue aceptado por otro repartidor');
-
-      const storeCityId = (order as any).address?.store?.id_ciudad;
-      if (storeCityId && storeCityId !== deliveryCityId) {
-        throw new ForbiddenException('Este pedido no pertenece a tu ciudad');
-      }
 
       // Solo se puede aceptar cuando cocina ya confirmó (preparando)
       if (!['preparando', 'pendiente'].includes(order.estado)) {
@@ -537,104 +533,5 @@ export class OrdersService {
     await this.orderRepository.remove(order);
 
     return { message: `Pedido #${id} eliminado exitosamente` };
-  }
-
-  /**
-   * Obtiene pedidos pendientes para cocina (estado 'pendiente' o 'en_cocina')
-   */
-  async findKitchenOrders(cityId?: number): Promise<Order[]> {
-    const query = this.orderRepository.createQueryBuilder('order')
-      .leftJoinAndSelect('order.user', 'user')
-      .leftJoinAndSelect('order.address', 'address')
-      .leftJoinAndSelect('order.orderItems', 'orderItems')
-      .leftJoinAndSelect('orderItems.product', 'product')
-      .where('order.estado IN (:...estados)', { estados: ['pendiente', 'en_cocina'] })
-      .orderBy('order.fecha_pedido', 'ASC');
-
-    if (cityId) {
-      query.andWhere('user.id_ciudad = :cityId', { cityId });
-    }
-
-    return query.getMany();
-  }
-
-  /**
-   * Cocina acepta un pedido - cambia de pendiente/en_cocina a aceptado_cocina
-   */
-  async kitchenAcceptOrder(orderId: number): Promise<Order> {
-    const order = await this.orderRepository.findOne({
-      where: { id_pedido: orderId },
-      relations: ['user', 'address', 'orderItems', 'orderItems.product'],
-    });
-
-    if (!order) {
-      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
-    }
-
-    if (!['pendiente', 'en_cocina'].includes(order.estado)) {
-      throw new BadRequestException('Este pedido no puede ser aceptado por cocina');
-    }
-
-    order.estado = 'aceptado_cocina';
-    order.fecha_aceptado_cocina = new Date();
-    return this.orderRepository.save(order);
-  }
-
-  /**
-   * Obtiene pedidos disponibles para delivery (estado 'aceptado_cocina')
-   */
-  async findAvailableForDelivery(cityId?: number): Promise<Order[]> {
-    const query = this.orderRepository.createQueryBuilder('order')
-      .leftJoinAndSelect('order.user', 'user')
-      .leftJoinAndSelect('order.address', 'address')
-      .leftJoinAndSelect('order.orderItems', 'orderItems')
-      .leftJoinAndSelect('orderItems.product', 'product')
-      .where('order.estado = :estado', { estado: 'aceptado_cocina' })
-      .andWhere('order.id_repartidor IS NULL')
-      .orderBy('order.fecha_pedido', 'ASC');
-
-    if (cityId) {
-      query.andWhere('user.id_ciudad = :cityId', { cityId });
-    }
-
-    return query.getMany();
-  }
-
-  /**
-   * Delivery acepta un pedido
-   */
-  async deliveryAcceptOrder(orderId: number, deliveryUserId: number): Promise<Order> {
-    const order = await this.orderRepository.findOne({
-      where: { id_pedido: orderId },
-      relations: ['user', 'address', 'orderItems', 'orderItems.product'],
-    });
-
-    if (!order) {
-      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
-    }
-
-    if (order.estado !== 'aceptado_cocina') {
-      throw new BadRequestException('Este pedido no está disponible para delivery');
-    }
-
-    if (order.id_repartidor) {
-      throw new BadRequestException('Este pedido ya fue asignado a otro repartidor');
-    }
-
-    order.estado = 'asignado_delivery';
-    order.id_repartidor = deliveryUserId;
-    order.fecha_asignado_delivery = new Date();
-    return this.orderRepository.save(order);
-  }
-
-  /**
-   * Obtiene pedidos asignados a un delivery específico
-   */
-  async findDeliveryOrders(deliveryUserId: number): Promise<Order[]> {
-    return this.orderRepository.find({
-      where: { id_repartidor: deliveryUserId },
-      relations: ['user', 'address', 'orderItems', 'orderItems.product'],
-      order: { fecha_pedido: 'DESC' },
-    });
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 
 import { User } from './entities/users.entity';
@@ -53,22 +53,28 @@ export class UsersService {
 
     // Buscar roles en la base de datos
     const userRolesEntities = await this.roleRepository.find({
-      where: roles.map(role => ({ nombre: role }))
+      where: { nombre: In(roles) }
     });
 
     if (userRolesEntities.length === 0) {
       throw new BadRequestException('No se encontraron roles válidos');
     }
 
-    // Crear usuario
+    // Crear usuario sin roles primero
     const newUser = this.userRepository.create({
       ...userData,
       correo,
-      contrasena: hashedPassword,
-      roles: userRolesEntities
+      contrasena: hashedPassword
     });
 
-    return this.userRepository.save(newUser);
+    // Guardar usuario
+    const savedUser = await this.userRepository.save(newUser);
+
+    // Asignar roles después de guardar
+    savedUser.roles = userRolesEntities;
+
+    // Guardar con roles
+    return this.userRepository.save(savedUser);
   }
 
   /**
@@ -149,7 +155,7 @@ export class UsersService {
       }
 
       const userRolesEntities = await this.roleRepository.find({
-        where: updateUserDto.roles.map(role => ({ nombre: role }))
+        where: { nombre: In(updateUserDto.roles) }
       });
 
       if (userRolesEntities.length === 0) {
@@ -169,11 +175,43 @@ export class UsersService {
   /**
    * Elimina un usuario
    * @param id ID del usuario a eliminar
-   * @param userCity Ciudad del usuario que realiza la solicitud
    * @param userRoles Roles del usuario que realiza la solicitud
+   * @param userCity Ciudad del usuario que realiza la solicitud
    */
-  async remove(id: number, userCity?: number, userRoles?: string[]) {
+  async remove(id: number, userRoles?: string[], userCity?: number) {
     const user = await this.findOne(id, userCity, userRoles);
     return this.userRepository.remove(user);
+  }
+
+  /**
+   * Activa o desactiva un usuario (cambia is_working)
+   * @param id ID del usuario
+   * @param userRoles Roles del usuario que realiza la solicitud
+   * @param userCity Ciudad del usuario que realiza la solicitud
+   */
+  async toggleStatus(id: number, userRoles?: string[], userCity?: number) {
+    const isSuperAdmin = userRoles?.includes('superadmin');
+    
+    const user = await this.userRepository.findOne({
+      where: isSuperAdmin ? { id_usuario: id } : { id_usuario: id, id_ciudad: userCity },
+      relations: ['roles', 'city']
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado o no tienes permisos para modificarlo');
+    }
+
+    user.is_working = !user.is_working;
+    await this.userRepository.save(user);
+
+    return {
+      message: `Usuario ${user.is_working ? 'activado' : 'desactivado'} exitosamente`,
+      user: {
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        correo: user.correo,
+        is_working: user.is_working
+      }
+    };
   }
 }
