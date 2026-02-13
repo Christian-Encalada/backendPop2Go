@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe, Put, Query, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe, Put, Query, Patch, BadRequestException } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -6,6 +6,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 /**
  * Controlador para la gestión de productos
@@ -45,8 +47,12 @@ export class ProductsController {
   @ApiResponse({ status: 201, description: 'Producto creado exitosamente' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto).then(p => this.mapProductResponse(p));
+  async create(@Body() createProductDto: CreateProductDto) {
+    const product = await this.productsService.create(createProductDto);
+    if (createProductDto.localId !== undefined) {
+      await this.productsService.setStockLocal(product.id_producto, createProductDto.localId, createProductDto.stock);
+    }
+    return this.mapProductResponse(product);
   }
 
   /**
@@ -57,10 +63,12 @@ export class ProductsController {
   @ApiOperation({ summary: 'Obtener todos los productos' })
   @ApiQuery({ name: 'active', required: false, type: Boolean, description: 'Filtrar solo productos activos' })
   @ApiQuery({ name: 'localId', required: false, type: Number, description: 'ID del local para obtener stock específico' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Buscar productos por nombre, descripción o categoría' })
   @ApiResponse({ status: 200, description: 'Lista de productos obtenida exitosamente' })
   findAll(
     @Query('active') activeStr?: any,
-    @Query('localId') localId?: string
+    @Query('localId') localId?: string,
+    @Query('search') search?: string
   ) {
     let active: boolean | undefined;
     if (activeStr === undefined) {
@@ -75,7 +83,7 @@ export class ProductsController {
     if (localId !== undefined) {
       const id = parseInt(localId, 10);
       if (!isNaN(id)) {
-        return this.productsService.findByLocal(id, active);
+        return this.productsService.findByLocal(id, active, search);
       }
     }
     return this.productsService.findAll(active).then(products =>
@@ -109,8 +117,46 @@ export class ProductsController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Prohibido - No tiene permisos suficientes' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(id, updateProductDto).then(p => this.mapProductResponse(p));
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    const localIdRaw = body?.localId ?? body?.id_local ?? body?.idLocal;
+    const hasLocalId = localIdRaw !== undefined && localIdRaw !== null && localIdRaw !== '';
+
+    const updatePayload: UpdateProductDto = {};
+    if (body?.nombre !== undefined) updatePayload.nombre = body.nombre;
+    if (body?.descripcion !== undefined) updatePayload.descripcion = body.descripcion;
+    if (body?.imagen !== undefined) updatePayload.imagen = body.imagen;
+    if (body?.id_categoria !== undefined) updatePayload.id_categoria = body.id_categoria;
+    if (body?.precio !== undefined) updatePayload.precio = body.precio;
+    if (body?.stock !== undefined && !hasLocalId) updatePayload.stock = body.stock;
+    if (body?.activo !== undefined) updatePayload.activo = body.activo;
+
+    const dto = plainToInstance(UpdateProductDto, updatePayload);
+    const errors = await validate(dto, { whitelist: true, forbidNonWhitelisted: false });
+    if (errors.length) {
+      const messages = errors.flatMap(error =>
+        error.constraints ? Object.values(error.constraints) : []
+      );
+      throw new BadRequestException(messages.length ? messages : 'Datos inválidos');
+    }
+
+    const product = await this.productsService.update(id, dto);
+
+    if (hasLocalId) {
+      const localId = Number(localIdRaw);
+      if (!Number.isFinite(localId)) {
+        throw new BadRequestException('El ID del local debe ser un número válido');
+      }
+      const quantity = Number(body?.stock);
+      if (!Number.isFinite(quantity)) {
+        throw new BadRequestException('La cantidad debe ser un número válido');
+      }
+      if (quantity < 0) {
+        throw new BadRequestException('La cantidad no puede ser negativa');
+      }
+      await this.productsService.updateStockLocal(id, localId, quantity);
+    }
+
+    return this.mapProductResponse(product);
   }
 
   /**

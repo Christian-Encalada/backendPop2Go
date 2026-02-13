@@ -7,7 +7,7 @@ export class Role {
   id_rol: number;
 
   @Column({ length: 50, unique: true })
-  nombre: string; // 'cliente', 'repartidor', 'admin', 'superadmin'
+  nombre: string; // 'cliente', 'repartidor', 'admin', 'superadmin', 'cocina'
 
   @ManyToMany(() => User, user => user.roles)
   users: User[];

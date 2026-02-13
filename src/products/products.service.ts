@@ -64,12 +64,24 @@ export class ProductsService {
    * @param onlyActive Si es true, solo devuelve productos activos
    * @returns Lista de productos con stock del local
    */
-  async findByLocal(localId: number, onlyActive: boolean = true): Promise<any[]> {
+  async findByLocal(localId: number, onlyActive?: boolean, search?: string): Promise<any[]> {
     const query = this.productRepository
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.categoryRelation', 'categoryRelation')
       .leftJoinAndSelect('product.stockLocales', 'stockLocal', 'stockLocal.id_local = :localId', { localId })
-      .where('product.activo = :activo', { activo: onlyActive });
+      .leftJoinAndSelect('product.categoryRelation', 'category');
+
+    if (onlyActive !== undefined) {
+      query.andWhere('product.activo = :activo', { activo: onlyActive });
+    }
+
+    if (search?.trim()) {
+      const term = `%${search.trim().toLowerCase()}%`;
+      query.andWhere(
+        '(LOWER(product.nombre) LIKE :term OR LOWER(product.descripcion) LIKE :term OR LOWER(category.nombre) LIKE :term)',
+        { term }
+      );
+    }
 
     const products = await query.getMany();
 
@@ -219,6 +231,10 @@ export class ProductsService {
     let stockLocal = await this.stockLocalRepository.findOne({
       where: { id_producto: productId, id_local: localId }
     });
+
+    if (stock < 0) {
+      throw new BadRequestException('El stock no puede ser negativo');
+    }
 
     if (stockLocal) {
       // Actualizar existente

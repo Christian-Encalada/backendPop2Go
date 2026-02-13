@@ -20,13 +20,37 @@ export class Order {
     length: 30,
     default: 'pendiente'
   })
-  estado: string; // 'pendiente', 'en_camino', 'entregado', 'cancelado'
+  estado: string;
+  // Estados del flujo:
+  // 'pendiente'         -> Pedido recién creado, enviándose a cocina
+  // 'en_cocina'         -> Pedido recibido por cocina, esperando aceptación
+  // 'aceptado_cocina'   -> Cocina aceptó, buscando delivery
+  // 'asignado_delivery' -> Un delivery aceptó el pedido
+  // 'en_camino'         -> El delivery va en camino
+  // 'entregado'         -> Pedido entregado al cliente
+  // 'cancelado'         -> Pedido cancelado
 
   @Column('decimal', { precision: 10, scale: 2 })
   total: number;
 
   @Column({ type: 'interval', nullable: true })
   tiempo_entrega: string;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: 'CASH'
+  })
+  metodo_pago: string; // 'CASH', 'TRANSFER'
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  monto_efectivo: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  fecha_aceptado_cocina: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  fecha_asignado_delivery: Date;
 
   // Relaciones
   @ManyToOne(() => User, user => user.orders)
