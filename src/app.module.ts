@@ -12,6 +12,7 @@ import { OrdersModule } from "./orders/orders.module";
 import { AddressesModule } from "./addresses/addresses.module";
 import { StoresModule } from "./stores/stores.module";
 import { AdminModule } from "./admin/admin.module";
+import { NotificationsModule } from './notifications/notifications.module';
 import { AppController } from "./app.controller";
 import { CategoriesModule } from "./categories/categories.module";
 import { UploadModule } from "./upload/upload.module";
@@ -47,6 +48,7 @@ import { UploadModule } from "./upload/upload.module";
     OrdersModule,
     AddressesModule,
     AdminModule,
+    NotificationsModule,
     CategoriesModule,
     UploadModule,
   ],

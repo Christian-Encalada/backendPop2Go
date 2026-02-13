@@ -5,12 +5,13 @@ import {
   Request,
   Patch,
   Param,
-  ParseIntPipe,
+  ParseIntPipe, Post, Body, Delete,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { AdminService } from "./admin.service";
+import { UsersService } from '../users/users.service';
 import {
   ApiTags,
   ApiOperation,
@@ -27,7 +28,10 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly usersService: UsersService,
+  ) {}
 
   /**
    * Obtiene estadísticas para el dashboard de administración
@@ -165,5 +169,74 @@ export class AdminController {
     const userCity = req.user.cityId;
 
     return this.adminService.deactivateDelivery(id, userRoles, userCity);
+  }
+
+  /**
+   * Crear usuario (cocina, delivery, admin, etc.)
+   */
+  @Post('users')
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Crear un nuevo usuario' })
+  @ApiResponse({ status: 201, description: 'Usuario creado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 409, description: 'El correo ya está registrado' })
+  async createUser(@Body() body: any, @Request() req) {
+    const { nombre, email, telefono, password, roles } = body;
+    
+    // Mapear campos del frontend al DTO del backend
+    const createUserDto = {
+      nombre,
+      correo: email,
+      contrasena: password,
+      telefono,
+      id_ciudad: req.user.cityId, // Usar la ciudad del admin
+      roles: roles || ['cliente'],
+    };
+
+    return this.usersService.create(
+      createUserDto,
+      req.user.userId,
+      req.user.roles
+    );
+  }
+
+  /**
+   * Obtener usuarios (con filtro opcional por rol)
+   */
+  @Get('users')
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Obtener usuarios filtrados por rol' })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios' })
+  async getUsers(@Request() req) {
+    const userRoles = req.user.roles || [];
+    const userCity = req.user.cityId;
+    
+    return this.usersService.findAll(userCity, userRoles);
+  }
+
+  /**
+   * Activar/desactivar usuario
+   */
+  @Patch('users/:id/toggle-status')
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Activar o desactivar un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Estado del usuario actualizado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async toggleUserStatus(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.usersService.toggleStatus(id, req.user.roles, req.user.cityId);
+  }
+
+  /**
+   * Eliminar usuario
+   */
+  @Delete('users/:id')
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Eliminar un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario a eliminar' })
+  @ApiResponse({ status: 200, description: 'Usuario eliminado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async deleteUser(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.usersService.remove(id, req.user.roles, req.user.cityId);
   }
 }

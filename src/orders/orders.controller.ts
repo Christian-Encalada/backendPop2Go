@@ -1,27 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Req,
-  Patch,
-  ParseIntPipe,
-} from "@nestjs/common";
-import { OrdersService } from "./orders.service";
-import { CreateOrderDto } from "./dto/create-order.dto";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { RolesGuard } from "../common/guards/roles.guard";
-import { Roles } from "../common/decorators/roles.decorator";
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-  ApiBody,
-} from "@nestjs/swagger";
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, ParseIntPipe, Delete } from '@nestjs/common';
+import { OrdersService } from './orders.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 
 /**
  * Controlador para la gestión de pedidos
@@ -125,20 +108,12 @@ export class OrdersController {
       type: "object",
       properties: {
         estado: {
-          type: "string",
-          enum: [
-            "pendiente",
-            "en_cocina",
-            "aceptado_cocina",
-            "asignado_delivery",
-            "en_camino",
-            "entregado",
-            "cancelado",
-          ],
-          description: "Nuevo estado del pedido",
-        },
-      },
-    },
+          type: 'string',
+          enum: ['nuevo', 'preparando', 'asignado', 'listo_para_recoger', 'recogido', 'en_cocina', 'aceptado_cocina', 'asignado_delivery', 'en_camino', 'entregado', 'cancelado', 'pendiente'],
+          description: 'Nuevo estado del pedido'
+        }
+      }
+    }
   })
   @ApiResponse({ status: 200, description: "Estado actualizado exitosamente" })
   @ApiResponse({
@@ -185,40 +160,58 @@ export class OrdersController {
     );
   }
 
+  /**
+   * Elimina un pedido (solo para admins)
+   * Los items del pedido se eliminan automáticamente
+   */
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'superadmin')
+  @ApiOperation({ summary: 'Eliminar un pedido (solo administradores)' })
+  @ApiParam({ name: 'id', description: 'ID del pedido a eliminar' })
+  @ApiResponse({ status: 200, description: 'Pedido eliminado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Prohibido - Solo administradores pueden eliminar pedidos' })
+  @ApiResponse({ status: 404, description: 'Pedido no encontrado' })
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req
+  ) {
+    return this.ordersService.remove(id, req.user.userId, req.user.roles);
+  }
+
   // ========== ENDPOINTS DE COCINA ==========
 
   /**
-   * Obtiene pedidos pendientes para cocina
+   * Cocina confirma un pedido (nuevo/pendiente -> preparando)
    */
-  @Get("kitchen/pending")
+  @Patch(':id/kitchen-confirm')
   @UseGuards(RolesGuard)
-  @Roles("cocina", "admin", "superadmin")
-  @ApiOperation({ summary: "Obtener pedidos pendientes para cocina" })
-  @ApiResponse({
-    status: 200,
-    description: "Lista de pedidos pendientes para cocina",
-  })
-  getKitchenOrders(@Req() req) {
-    return this.ordersService.findKitchenOrders(req.user.cityId);
+  @Roles('cocina', 'admin', 'superadmin')
+  @ApiOperation({ summary: 'Cocina confirma un pedido' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiResponse({ status: 200, description: 'Pedido confirmado por cocina' })
+  kitchenConfirm(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.ordersService.kitchenConfirm(id, req.user.userId, req.user.cityId);
   }
 
   /**
-   * Cocina acepta un pedido
+   * Cocina marca pedido como listo para recoger (asignado -> listo_para_recoger)
    */
-  @Patch(":id/kitchen-accept")
+  @Patch(':id/kitchen-ready')
   @UseGuards(RolesGuard)
-  @Roles("cocina", "admin", "superadmin")
-  @ApiOperation({ summary: "Cocina acepta un pedido" })
-  @ApiParam({ name: "id", description: "ID del pedido" })
-  @ApiResponse({ status: 200, description: "Pedido aceptado por cocina" })
-  kitchenAccept(@Param("id", ParseIntPipe) id: number) {
-    return this.ordersService.kitchenAcceptOrder(id);
+  @Roles('cocina', 'admin', 'superadmin')
+  @ApiOperation({ summary: 'Cocina marca pedido listo para recoger' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiResponse({ status: 200, description: 'Pedido marcado como listo para recoger' })
+  kitchenMarkReady(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.ordersService.kitchenMarkReady(id, req.user.userId, req.user.cityId);
   }
 
   // ========== ENDPOINTS DE DELIVERY ==========
 
   /**
-   * Obtiene pedidos disponibles para delivery (aceptados por cocina)
+   * Obtiene pedidos disponibles para delivery (en estado preparando)
    */
   @Get("delivery/available")
   @UseGuards(RolesGuard)
@@ -229,20 +222,20 @@ export class OrdersController {
     description: "Lista de pedidos disponibles para delivery",
   })
   getAvailableForDelivery(@Req() req) {
-    return this.ordersService.findAvailableForDelivery(req.user.cityId);
+    return this.ordersService.findAvailableForDelivery(req.user.userId, req.user.cityId);
   }
 
   /**
-   * Delivery acepta un pedido
+   * Delivery acepta un pedido (preparando -> asignado)
    */
   @Patch(":id/delivery-accept")
   @UseGuards(RolesGuard)
-  @Roles("repartidor")
-  @ApiOperation({ summary: "Delivery acepta un pedido" })
-  @ApiParam({ name: "id", description: "ID del pedido" })
-  @ApiResponse({ status: 200, description: "Pedido asignado al delivery" })
-  deliveryAccept(@Param("id", ParseIntPipe) id: number, @Req() req) {
-    return this.ordersService.deliveryAcceptOrder(id, req.user.userId);
+  @Roles('repartidor')
+  @ApiOperation({ summary: 'Delivery acepta un pedido' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiResponse({ status: 200, description: 'Pedido asignado al delivery' })
+  deliveryAccept(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.ordersService.acceptOrder(id, req.user.userId, req.user.cityId);
   }
 
   /**
@@ -254,6 +247,35 @@ export class OrdersController {
   @ApiOperation({ summary: "Obtener pedidos asignados a este delivery" })
   @ApiResponse({ status: 200, description: "Lista de pedidos del delivery" })
   getDeliveryOrders(@Req() req) {
-    return this.ordersService.findDeliveryOrders(req.user.userId);
+    return this.ordersService.findAssignedForDelivery(req.user.userId);
+  }
+
+  /**
+   * Delivery avanza el estado del pedido
+   */
+  @Patch(':id/delivery-advance')
+  @UseGuards(RolesGuard)
+  @Roles('repartidor')
+  @ApiOperation({ summary: 'Delivery avanza el estado del pedido' })
+  @ApiParam({ name: 'id', description: 'ID del pedido' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['recogido', 'en_camino', 'entregado'],
+          description: 'Siguiente estado del pedido'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 200, description: 'Estado del pedido actualizado' })
+  deliveryAdvance(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: 'recogido' | 'en_camino' | 'entregado',
+    @Req() req
+  ) {
+    return this.ordersService.advanceDeliveryStatus(id, status, req.user.userId, req.user.cityId);
   }
 }

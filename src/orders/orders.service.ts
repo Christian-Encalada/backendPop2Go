@@ -2,7 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ForbiddenException,
+  ForbiddenException, ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
@@ -10,6 +10,8 @@ import { Order } from "./entities/order.entity";
 import { OrderItem } from "./entities/order-item.entity";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { ProductsService } from "../products/products.service";
+import { NotificationsService } from '../notifications/notifications.service';
+import { User } from '../users/entities/users.entity';
 import { AddressesService } from "../addresses/addresses.service";
 
 /**
@@ -25,12 +27,31 @@ export class OrdersService {
     @InjectRepository(OrderItem)
     private orderItemRepository: Repository<OrderItem>,
 
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    
     private productsService: ProductsService,
+    
+    private notificationsService: NotificationsService,
 
     private addressesService: AddressesService,
 
     private dataSource: DataSource,
   ) {}
+
+  // Estados soportados (backend)
+  private readonly allowedStatuses = [
+    'nuevo', // creado por el cliente, esperando confirmación de cocina/local
+    'preparando', // cocina confirma y comienza preparación
+    'asignado', // delivery acepta y va al local
+    'listo_para_recoger', // cocina marca listo para pickup
+    'recogido', // delivery recogió en local
+    'en_camino', // delivery va al cliente
+    'entregado', // entregado al cliente
+    'cancelado',
+    // legacy (para no romper datos viejos)
+    'pendiente', // se trata como "nuevo"
+  ] as const;
 
   /**
    * Crea un nuevo pedido
@@ -60,7 +81,7 @@ export class OrdersService {
       const newOrder = this.orderRepository.create({
         id_usuario: userId,
         id_direccion: createOrderDto.id_direccion,
-        estado: "en_cocina",
+        estado: 'nuevo',
         total: 0, // Se calculará después
         metodo_pago: createOrderDto.metodo_pago,
         monto_efectivo: createOrderDto.monto_efectivo,
@@ -114,6 +135,8 @@ export class OrdersService {
       // Confirmar transacción
       await queryRunner.commitTransaction();
 
+      // NOTA: en este nuevo flujo NO notificamos a deliveries aquí.
+      // Primero cocina debe confirmar el pedido (estado -> preparando).
       return savedOrder;
     } catch (error) {
       // Revertir transacción en caso de error
@@ -139,7 +162,15 @@ export class OrdersService {
   ): Promise<Order[]> {
     // Construir opciones de consulta según permisos
     const options: any = {
-      relations: ["user", "address", "orderItems", "orderItems.product"],
+      relations: [
+        'user',
+        'address',
+        'address.store',
+        'address.store.city',
+        'deliveryPerson',
+        'orderItems',
+        'orderItems.product',
+      ],
     };
 
     // Filtrar según rol
@@ -158,7 +189,8 @@ export class OrdersService {
     ) {
       // Admin ve pedidos de su ciudad
       if (cityId) {
-        options.where = { user: { id_ciudad: cityId } };
+        // Importante: la ciudad del pedido la define el local (store) asociado a la dirección
+        options.where = { address: { store: { id_ciudad: cityId } } };
       }
     }
     // Superadmin ve todos los pedidos
@@ -182,7 +214,15 @@ export class OrdersService {
   ): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id_pedido: id },
-      relations: ["user", "address", "orderItems", "orderItems.product"],
+      relations: [
+        'user',
+        'address',
+        'address.store',
+        'address.store.city',
+        'deliveryPerson',
+        'orderItems',
+        'orderItems.product',
+      ],
     });
 
     if (!order) {
@@ -260,8 +300,8 @@ export class OrdersService {
     }
 
     // Validar estado
-    if (!this.VALID_STATES.includes(estado)) {
-      throw new BadRequestException("Estado inválido");
+    if (!this.allowedStatuses.includes(estado as any)) {
+      throw new BadRequestException('Estado inválido');
     }
 
     // Verificar reglas específicas según estado
@@ -314,114 +354,239 @@ export class OrdersService {
   }
 
   /**
-   * Obtiene pedidos pendientes para cocina (estado 'pendiente' o 'en_cocina')
+   * Pedidos disponibles para repartidores (por ciudad del repartidor)
+   * - No asignados (id_repartidor null)
+   * - En estado "preparando" (listos para ser aceptados)
    */
-  async findKitchenOrders(cityId?: number): Promise<Order[]> {
-    const query = this.orderRepository
-      .createQueryBuilder("order")
-      .leftJoinAndSelect("order.user", "user")
-      .leftJoinAndSelect("order.address", "address")
-      .leftJoinAndSelect("order.orderItems", "orderItems")
-      .leftJoinAndSelect("orderItems.product", "product")
-      .where("order.estado IN (:...estados)", {
-        estados: ["pendiente", "en_cocina"],
-      })
-      .orderBy("order.fecha_pedido", "ASC");
-
-    if (cityId) {
-      query.andWhere("user.id_ciudad = :cityId", { cityId });
+  async findAvailableForDelivery(deliveryUserId: number, deliveryCityId: number): Promise<Order[]> {
+    // Validar que sea delivery aprobado (para evitar cuentas sin verificar)
+    const deliveryUser = await this.userRepository.findOne({ where: { id_usuario: deliveryUserId }, relations: ['roles'] });
+    if (!deliveryUser) throw new NotFoundException('Repartidor no encontrado');
+    if (deliveryUser.delivery_status !== 'approved') {
+      throw new ForbiddenException('Tu cuenta de repartidor aún no está aprobada');
     }
 
-    return query.getMany();
+    return this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.address', 'address')
+      .leftJoinAndSelect('address.store', 'store')
+      .leftJoinAndSelect('store.city', 'city')
+      .leftJoinAndSelect('order.orderItems', 'orderItems')
+      .leftJoinAndSelect('orderItems.product', 'product')
+      .where('order.id_repartidor IS NULL')
+      .andWhere('order.estado IN (:...statuses)', { statuses: ['preparando'] })
+      .andWhere('store.id_ciudad = :cityId', { cityId: deliveryCityId })
+      .orderBy('order.fecha_pedido', 'DESC')
+      .getMany();
   }
 
   /**
-   * Cocina acepta un pedido - cambia de pendiente/en_cocina a aceptado_cocina
+   * Pedidos asignados a un repartidor
    */
-  async kitchenAcceptOrder(orderId: number): Promise<Order> {
-    const order = await this.orderRepository.findOne({
-      where: { id_pedido: orderId },
-      relations: ["user", "address", "orderItems", "orderItems.product"],
+  async findAssignedForDelivery(deliveryUserId: number): Promise<Order[]> {
+    return this.orderRepository.find({
+      where: { id_repartidor: deliveryUserId },
+      relations: [
+        'user',
+        'address',
+        'address.store',
+        'address.store.city',
+        'deliveryPerson',
+        'orderItems',
+        'orderItems.product',
+      ],
+      order: { fecha_pedido: 'DESC' } as any,
     });
-
-    if (!order) {
-      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
-    }
-
-    if (!["pendiente", "en_cocina"].includes(order.estado)) {
-      throw new BadRequestException(
-        "Este pedido no puede ser aceptado por cocina",
-      );
-    }
-
-    order.estado = "aceptado_cocina";
-    order.fecha_aceptado_cocina = new Date();
-    return this.orderRepository.save(order);
   }
 
   /**
-   * Obtiene pedidos disponibles para delivery (estado 'aceptado_cocina')
+   * Aceptar un pedido: asignación atómica para evitar doble-aceptación.
+   * Transición: preparando/pendiente -> asignado, set id_repartidor
    */
-  async findAvailableForDelivery(cityId?: number): Promise<Order[]> {
-    const query = this.orderRepository
-      .createQueryBuilder("order")
-      .leftJoinAndSelect("order.user", "user")
-      .leftJoinAndSelect("order.address", "address")
-      .leftJoinAndSelect("order.orderItems", "orderItems")
-      .leftJoinAndSelect("orderItems.product", "product")
-      .where("order.estado = :estado", { estado: "aceptado_cocina" })
-      .andWhere("order.id_repartidor IS NULL")
-      .orderBy("order.fecha_pedido", "ASC");
+  async acceptOrder(orderId: number, deliveryUserId: number, deliveryCityId: number): Promise<Order> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (cityId) {
-      query.andWhere("user.id_ciudad = :cityId", { cityId });
+    try {
+      // Lock pessimista para evitar que 2 repartidores acepten al mismo tiempo
+      // Primero bloquear solo la orden (sin JOINs para evitar error de PostgreSQL)
+      const order = await queryRunner.manager
+        .createQueryBuilder(Order, 'order')
+        .setLock('pessimistic_write')
+        .where('order.id_pedido = :orderId', { orderId })
+        .getOne();
+
+      if (!order) throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+      if (order.id_repartidor) throw new ConflictException('Este pedido ya fue aceptado por otro repartidor');
+
+      // Solo se puede aceptar cuando cocina ya confirmó (preparando)
+      if (!['preparando', 'pendiente'].includes(order.estado)) {
+        throw new BadRequestException('Este pedido no está disponible para aceptar');
+      }
+
+      order.id_repartidor = deliveryUserId;
+      order.estado = 'asignado';
+      const saved = await queryRunner.manager.save(order);
+
+      await queryRunner.commitTransaction();
+
+      // devolver con relaciones para el frontend
+      return this.findOne(saved.id_pedido, deliveryUserId, ['repartidor'], deliveryCityId);
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      throw e;
+    } finally {
+      await queryRunner.release();
     }
-
-    return query.getMany();
   }
 
   /**
-   * Delivery acepta un pedido
+   * Avanzar estado del pedido por el repartidor asignado
+   * Transiciones válidas:
+   * - asignado -> recogido
+   * - recogido -> en_camino
+   * - en_camino -> entregado
    */
-  async deliveryAcceptOrder(
+  async advanceDeliveryStatus(
     orderId: number,
+    nextStatus: 'recogido' | 'en_camino' | 'entregado',
     deliveryUserId: number,
+    deliveryCityId: number,
   ): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id_pedido: orderId },
-      relations: ["user", "address", "orderItems", "orderItems.product"],
+      relations: ['address', 'address.store', 'orderItems'],
     });
 
-    if (!order) {
-      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+    if (!order) throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+
+    const storeCityId = (order as any).address?.store?.id_ciudad;
+    if (storeCityId && storeCityId !== deliveryCityId) {
+      throw new ForbiddenException('Este pedido no pertenece a tu ciudad');
     }
 
-    if (order.estado !== "aceptado_cocina") {
-      throw new BadRequestException(
-        "Este pedido no está disponible para delivery",
-      );
+    if (order.id_repartidor !== deliveryUserId) {
+      throw new ForbiddenException('No tienes permiso para actualizar este pedido');
     }
 
-    if (order.id_repartidor) {
-      throw new BadRequestException(
-        "Este pedido ya fue asignado a otro repartidor",
-      );
+    // Reglas:
+    // - asignado -> NO puede pasar directo a recogido; primero cocina debe marcar listo_para_recoger
+    // - listo_para_recoger -> recogido (delivery)
+    // - recogido -> en_camino
+    // - en_camino -> entregado
+    const transitionOk =
+      (order.estado === 'listo_para_recoger' && nextStatus === 'recogido') ||
+      (order.estado === 'recogido' && nextStatus === 'en_camino') ||
+      (order.estado === 'en_camino' && nextStatus === 'entregado');
+
+    if (!transitionOk) {
+      throw new BadRequestException(`Transición inválida: ${order.estado} -> ${nextStatus}`);
     }
 
-    order.estado = "asignado_delivery";
-    order.id_repartidor = deliveryUserId;
-    order.fecha_asignado_delivery = new Date();
-    return this.orderRepository.save(order);
+    order.estado = nextStatus;
+
+    // Si está entregado, registrar tiempo de entrega
+    if (nextStatus === 'entregado') {
+      const fechaPedido = new Date(order.fecha_pedido);
+      const fechaEntrega = new Date();
+      const tiempoEntrega = Math.floor((fechaEntrega.getTime() - fechaPedido.getTime()) / (1000 * 60)); // Minutos
+      order.tiempo_entrega = `${tiempoEntrega} minutes`;
+    }
+
+    await this.orderRepository.save(order);
+    return this.findOne(orderId, deliveryUserId, ['repartidor'], deliveryCityId);
   }
 
   /**
-   * Obtiene pedidos asignados a un delivery específico
+   * Cocina: confirmar pedido (nuevo/pendiente -> preparando)
+   * También dispara notificación a deliveries activos de la ciudad.
    */
-  async findDeliveryOrders(deliveryUserId: number): Promise<Order[]> {
-    return this.orderRepository.find({
-      where: { id_repartidor: deliveryUserId },
-      relations: ["user", "address", "orderItems", "orderItems.product"],
-      order: { fecha_pedido: "DESC" },
+  async kitchenConfirm(orderId: number, kitchenUserId: number, kitchenCityId: number): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id_pedido: orderId },
+      relations: ['address', 'address.store'],
     });
+
+    if (!order) throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+
+    const storeCityId = (order as any).address?.store?.id_ciudad;
+    if (storeCityId && storeCityId !== kitchenCityId) {
+      throw new ForbiddenException('Este pedido no pertenece a tu ciudad');
+    }
+
+    const current = order.estado === 'pendiente' ? 'nuevo' : order.estado;
+    if (current !== 'nuevo') {
+      throw new BadRequestException('Este pedido ya fue confirmado o no está en estado válido');
+    }
+
+    order.estado = 'preparando';
+    await this.orderRepository.save(order);
+
+    // Notificar a deliveries activos en la ciudad para que puedan aceptar
+    if (storeCityId) {
+      this.notificationsService
+        .notifyDeliveriesInCity(
+          storeCityId,
+          '🍦 Pedido confirmado',
+          `Pedido #${order.id_pedido} listo para ser aceptado por delivery`,
+          { orderId: order.id_pedido, type: 'order_confirmed' },
+        )
+        .catch(() => undefined);
+    }
+
+    return this.findOne(order.id_pedido, kitchenUserId, ['cocina'], kitchenCityId);
+  }
+
+  /**
+   * Cocina: marcar listo para recoger (asignado -> listo_para_recoger)
+   */
+  async kitchenMarkReady(orderId: number, kitchenUserId: number, kitchenCityId: number): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id_pedido: orderId },
+      relations: ['address', 'address.store'],
+    });
+
+    if (!order) throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+
+    const storeCityId = (order as any).address?.store?.id_ciudad;
+    if (storeCityId && storeCityId !== kitchenCityId) {
+      throw new ForbiddenException('Este pedido no pertenece a tu ciudad');
+    }
+
+    if (order.estado !== 'asignado') {
+      throw new BadRequestException('Solo puedes marcar listo cuando el pedido está asignado a un delivery');
+    }
+
+    order.estado = 'listo_para_recoger';
+    await this.orderRepository.save(order);
+
+    return this.findOne(order.id_pedido, kitchenUserId, ['cocina'], kitchenCityId);
+  }
+
+  /**
+   * Elimina un pedido (solo para admins)
+   * Los items del pedido se eliminan automáticamente gracias a CASCADE
+   * @param id ID del pedido a eliminar
+   * @param userId ID del usuario que realiza la eliminación
+   * @param userRoles Roles del usuario
+   * @returns Mensaje de confirmación
+   */
+  async remove(id: number, userId: number, userRoles: string[]): Promise<{ message: string }> {
+    // Solo admins pueden eliminar pedidos
+    if (!userRoles.includes('admin') && !userRoles.includes('superadmin')) {
+      throw new ForbiddenException('Solo los administradores pueden eliminar pedidos');
+    }
+
+    const order = await this.findOne(id, userId, userRoles);
+
+    // Verificar que el pedido no esté en un estado crítico (opcional: solo permitir eliminar cancelados o entregados antiguos)
+    // Por ahora, permitimos eliminar cualquier pedido si eres admin
+
+    // Eliminar el pedido (los items se eliminan automáticamente por CASCADE)
+    await this.orderRepository.remove(order);
+
+    return { message: `Pedido #${id} eliminado exitosamente` };
   }
 }

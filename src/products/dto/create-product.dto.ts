@@ -45,12 +45,12 @@ export class CreateProductDto {
   @ApiProperty({
     description: "ID de la categoría del producto",
     example: 1,
-    required: false,
+    required: true
   })
-  @IsNumber({}, { message: "El ID de categoría debe ser un número" })
-  @IsOptional()
+  @IsNumber({}, { message: 'El ID de categoría debe ser un número' })
+  @IsNotEmpty({ message: 'El ID de categoría es requerido' })
   @Type(() => Number)
-  id_categoria?: number;
+  id_categoria: number;
 
   @ApiProperty({
     description: "Precio del producto",

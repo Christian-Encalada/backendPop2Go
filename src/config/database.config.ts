@@ -14,7 +14,9 @@ export const databaseConfig: TypeOrmModuleOptions = {
   database: process.env.DB_NAME,
   entities: [__dirname + "/../**/*.entity{.ts,.js}"],
   synchronize: process.env.NODE_ENV !== "production", // Solo en desarrollo
-  logging: process.env.NODE_ENV !== "production",
+  // Evitar spam de queries en consola (puede saturar logs en móvil)
+  // Para ver queries, setear TYPEORM_LOGGING=true
+  logging: process.env.TYPEORM_LOGGING === "true",
   // Habilitar SSL para conexión a Supabase
   ssl: true,
   // Opciones adicionales para resolver problemas de conexión

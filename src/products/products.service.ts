@@ -7,6 +7,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Product } from "./entities/product.entity";
 import { StockLocal } from "./entities/stock-local.entity";
+import { Category } from '../categories/entities/category.entity';
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 
@@ -21,6 +22,8 @@ export class ProductsService {
     private productRepository: Repository<Product>,
     @InjectRepository(StockLocal)
     private stockLocalRepository: Repository<StockLocal>,
+    @InjectRepository(Category)
+    private categoryRepository: Repository<Category>,
   ) {}
 
   /**
@@ -29,6 +32,15 @@ export class ProductsService {
    * @returns El producto creado
    */
   async create(createProductDto: CreateProductDto): Promise<Product> {
+    // Validar que la categoría existe
+    const category = await this.categoryRepository.findOne({
+      where: { id_categoria: createProductDto.id_categoria }
+    });
+
+    if (!category) {
+      throw new NotFoundException(`Categoría con ID ${createProductDto.id_categoria} no encontrada`);
+    }
+
     const newProduct = this.productRepository.create(createProductDto);
     return this.productRepository.save(newProduct);
   }
@@ -132,6 +144,17 @@ export class ProductsService {
     updateProductDto: UpdateProductDto,
   ): Promise<Product> {
     const product = await this.findOne(id);
+    
+    // Si se está actualizando la categoría, validar que existe
+    if (updateProductDto.id_categoria !== undefined) {
+      const category = await this.categoryRepository.findOne({
+        where: { id_categoria: updateProductDto.id_categoria }
+      });
+
+      if (!category) {
+        throw new NotFoundException(`Categoría con ID ${updateProductDto.id_categoria} no encontrada`);
+      }
+    }
 
     // Actualizar datos
     Object.assign(product, updateProductDto);
