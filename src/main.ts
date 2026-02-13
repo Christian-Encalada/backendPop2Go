@@ -37,7 +37,7 @@ async function bootstrap() {
 
   // Prefijo global para la API
   app.setGlobalPrefix("api", {
-    exclude: [""], // Excluir la ruta raíz del prefijo
+    exclude: ["/", ""], // Excluir la ruta raíz del prefijo
   });
 
   // Puerto de la aplicación

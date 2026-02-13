@@ -35,7 +35,7 @@ async function createServer() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document);
     app.setGlobalPrefix('api', {
-      exclude: [''],
+      exclude: ['/', ''],
     });
     await app.init();
     cachedServer = serverless(expressApp);
