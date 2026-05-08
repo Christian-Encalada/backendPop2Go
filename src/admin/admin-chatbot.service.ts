@@ -52,6 +52,9 @@ export class AdminChatbotService {
     "vendio",
     "vendimos",
     "vendido",
+    "shopping",
+    "mall",
+    "paseo",
   ];
 
   constructor(private readonly dataSource: DataSource) {}
@@ -66,7 +69,11 @@ export class AdminChatbotService {
     );
 
     if (quickAnswer) {
-      return { answer: quickAnswer, restricted: false };
+      return {
+        answer: quickAnswer,
+        restricted: false,
+        meta: { used: "sql" as const, model: null },
+      };
     }
 
     const hasBusinessIntent = this.isBusinessQuestion(normalizedQuestion);
@@ -76,13 +83,18 @@ export class AdminChatbotService {
         answer:
           "Solo puedo responder sobre la operacion de Pop2Go (pedidos, ventas, productos, stock, repartidores, ciudades y flujo del negocio). Reformula tu pregunta dentro de ese alcance.",
         restricted: true,
+        meta: { used: "filter" as const, model: null },
       };
     }
 
     const ragContext = await this.buildRagContext(isSuperAdmin, userCityId);
-    let answer: string;
     try {
-      answer = await this.askLlm(normalizedQuestion, ragContext);
+      const llmResult = await this.askLlm(normalizedQuestion, ragContext);
+      return {
+        answer: llmResult.answer,
+        restricted: false,
+        meta: { used: llmResult.provider, model: llmResult.model },
+      };
     } catch (error: any) {
       const isRateLimited = error?.statusCode === 429;
       if (isRateLimited) {
@@ -91,26 +103,32 @@ export class AdminChatbotService {
           isSuperAdmin,
           userCityId,
         );
-        if (fallback) return { answer: fallback, restricted: false };
+        if (fallback) {
+          return {
+            answer: fallback,
+            restricted: false,
+            meta: { used: "sql" as const, model: null },
+          };
+        }
         return {
           answer:
-            "Ahora mismo el proveedor de IA esta con alta demanda. Intenta de nuevo en unos segundos. Mientras tanto, puedes hacer preguntas mas cortas o usar un modelo de respaldo en OPENROUTER_FALLBACK_MODELS.",
+            "Ahora mismo el proveedor de IA esta con alta demanda. Intenta de nuevo en unos segundos.",
           restricted: false,
+          meta: { used: "rate_limited" as const, model: null },
         };
       }
       throw error;
     }
-
-    return {
-      answer,
-      restricted: false,
-    };
   }
 
   private isBusinessQuestion(question: string) {
     const lowered = question.toLowerCase();
     // Saludos cortos: responder sin bloquear (pero guiando al alcance)
     if (/^(hola|buenas|buenos dias|buenas tardes|buenas noches)\b/.test(lowered)) {
+      return true;
+    }
+    // Follow-ups típicos del chat: "y en el ...?"
+    if (/^y\\s+en\\b/.test(lowered)) {
       return true;
     }
     return this.businessKeywords.some((keyword) => lowered.includes(keyword));
@@ -147,12 +165,54 @@ export class AdminChatbotService {
 
     // Stock bajo
     if (/stock bajo|bajo stock|poco stock|sin stock|inventario bajo/.test(q)) {
-      const rows = await this.getLowStockProducts(isSuperAdmin, userCityId);
+      // Permitir filtrar por ciudad explícita solo si es superadmin
+      const cityName = this.extractCityName(question);
+      if (cityName && !isSuperAdmin) {
+        return "No puedo consultar otra ciudad. Como admin solo puedo ver tu ciudad. Si necesitas ver otra ciudad, usa un usuario superadmin.";
+      }
+
+      const cityId = cityName
+        ? await this.resolveCityIdByName(cityName)
+        : undefined;
+
+      const storeName = this.extractStoreName(question);
+      const rows = await this.getLowStockProducts({
+        isSuperAdmin,
+        userCityId,
+        overrideCityId: cityId,
+        storeName,
+      });
       if (!rows?.length) return "No encontré productos con stock bajo (<= 5) en este momento.";
       const lines = rows.map(
         (r: any) => `- ${r.nombre} (${r.local}): stock ${r.stock}`,
       );
       return `Productos con stock bajo (<= 5):\n${lines.join("\n")}`;
+    }
+
+    // Follow-up corto: "Y en el Paseo Shopping?"
+    if (/^y\\s+en\\b/.test(q)) {
+      const storeName = this.extractStoreName(question);
+      const cityName = this.extractCityName(question);
+      if (cityName && !isSuperAdmin) {
+        return "No puedo consultar otra ciudad. Como admin solo puedo ver tu ciudad. Si necesitas ver otra ciudad, usa un usuario superadmin.";
+      }
+      const cityId = cityName
+        ? await this.resolveCityIdByName(cityName)
+        : undefined;
+      if (!storeName && !cityId) {
+        return "¿En qué local o ciudad? Ej: “¿y en el Paseo Shopping?” o “stock bajo en Portoviejo”.";
+      }
+      const rows = await this.getLowStockProducts({
+        isSuperAdmin,
+        userCityId,
+        overrideCityId: cityId,
+        storeName,
+      });
+      if (!rows?.length) return "No encontré productos con stock bajo (<= 5) para ese filtro.";
+      const lines = rows.map(
+        (r: any) => `- ${r.nombre} (${r.local}): stock ${r.stock}`,
+      );
+      return `Stock bajo (<= 5):\n${lines.join("\n")}`;
     }
 
     // Ventas / ingresos
@@ -161,6 +221,18 @@ export class AdminChatbotService {
         q,
       )
     ) {
+      const cityName = this.extractCityName(question);
+      const storeName = this.extractStoreName(question);
+      const hasScopedSalesFilter =
+        Boolean(cityName || storeName) ||
+        /\b(ciudad|local|shopping|mall|sucursal|tienda)\b/.test(q);
+
+      // Si la pregunta pide ventas por ciudad/local, delegamos al LLM.
+      // El atajo SQL actual solo responde métricas generales.
+      if (hasScopedSalesFilter) {
+        return null;
+      }
+
       const stats = await this.getGeneralStats(isSuperAdmin, userCityId);
       const todayOrders = stats?.today_orders ?? 0;
       const isToday =
@@ -221,6 +293,41 @@ export class AdminChatbotService {
     return Math.round(n).toLocaleString("es-CO");
   }
 
+  private extractCityName(text: string) {
+    const t = text.trim();
+    const m =
+      t.match(/ciudad de\\s+([^?.,]+)/i) ||
+      t.match(/en\\s+la\\s+ciudad\\s+de\\s+([^?.,]+)/i) ||
+      t.match(/en\\s+([^?.,]+)\\s*$/i);
+    const city = m?.[1]?.trim();
+    if (!city) return null;
+    // Evitar capturar cosas tipo "en el"
+    if (/^el\\b|^la\\b|^los\\b|^las\\b/i.test(city)) return null;
+    return city;
+  }
+
+  private extractStoreName(text: string) {
+    const t = text.trim();
+    const m =
+      t.match(/en\\s+el\\s+([^?.,]+)/i) ||
+      t.match(/en\\s+la\\s+([^?.,]+)/i) ||
+      t.match(/en\\s+([^?.,]+)/i);
+    const store = m?.[1]?.trim();
+    if (!store) return null;
+    // Si parece "ciudad de X", no es store
+    if (/^ciudad\\s+de\\b/i.test(store)) return null;
+    return store;
+  }
+
+  private async resolveCityIdByName(name: string): Promise<number | undefined> {
+    const rows = await this.dataSource.query(
+      `SELECT id_ciudad FROM tbl_ciudades WHERE LOWER(nombre) LIKE LOWER($1) LIMIT 1`,
+      [`%${name}%`],
+    );
+    const id = rows?.[0]?.id_ciudad;
+    return typeof id === "number" ? id : id ? parseInt(String(id), 10) : undefined;
+  }
+
   private async buildRagContext(isSuperAdmin: boolean, userCityId?: number) {
     const scope = isSuperAdmin
       ? "superadmin (todas las ciudades)"
@@ -231,7 +338,7 @@ export class AdminChatbotService {
         this.getGeneralStats(isSuperAdmin, userCityId),
         this.getOrdersByStatus(isSuperAdmin, userCityId),
         this.getTopProducts(isSuperAdmin, userCityId),
-        this.getLowStockProducts(isSuperAdmin, userCityId),
+        this.getLowStockProducts({ isSuperAdmin, userCityId }),
       ]);
 
     const businessRules = [
@@ -363,11 +470,24 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
     return this.dataSource.query(query, params);
   }
 
-  private async getLowStockProducts(isSuperAdmin: boolean, userCityId?: number) {
-    const params: Array<number> = [];
-    const cityFilterClause = isSuperAdmin
-      ? ""
-      : ` AND s.id_ciudad = $${params.push(userCityId ?? 0)} `;
+  private async getLowStockProducts(input: {
+    isSuperAdmin: boolean;
+    userCityId?: number;
+    overrideCityId?: number;
+    storeName?: string | null;
+  }) {
+    const params: Array<any> = [];
+    const effectiveCityId = input.isSuperAdmin
+      ? input.overrideCityId
+      : input.userCityId;
+
+    const cityFilterClause = effectiveCityId
+      ? ` AND s.id_ciudad = $${params.push(effectiveCityId)} `
+      : "";
+
+    const storeFilterClause = input.storeName
+      ? ` AND LOWER(s.nombre) LIKE LOWER($${params.push(`%${input.storeName}%`)}) `
+      : "";
 
     const query = `
       SELECT
@@ -382,6 +502,7 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
         AND sl.activo = true
         AND sl.stock <= 5
       ${cityFilterClause}
+      ${storeFilterClause}
       ORDER BY sl.stock ASC, p.nombre ASC
       LIMIT 10
     `;
@@ -411,7 +532,10 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
     return this.dataSource.query(query, params);
   }
 
-  private async askOpenRouter(question: string, ragContext: string) {
+  private async askOpenRouter(
+    question: string,
+    ragContext: string,
+  ): Promise<{ answer: string; model: string }> {
     const apiKey = process.env.OPENROUTER_API_KEY;
     const primaryModel =
       process.env.OPENROUTER_MODEL ||
@@ -501,7 +625,7 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
       const content = data?.choices?.[0]?.message?.content?.trim();
 
       if (content) {
-        return content;
+        return { answer: content, model };
       }
     }
 
@@ -526,17 +650,25 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
     );
   }
 
-  private async askLlm(question: string, ragContext: string) {
-    const provider = (process.env.LLM_PROVIDER || "openrouter").toLowerCase();
-    if (provider === "gemini") {
-      return this.askGemini(question, ragContext);
+  private async askLlm(
+    question: string,
+    ragContext: string,
+  ): Promise<{ answer: string; provider: "gemini" | "openrouter"; model: string }> {
+    const provider = (process.env.LLM_PROVIDER || "gemini").toLowerCase();
+    if (provider === "openrouter") {
+      const { answer, model } = await this.askOpenRouter(question, ragContext);
+      return { answer, provider: "openrouter", model };
     }
-    return this.askOpenRouter(question, ragContext);
+    const { answer, model } = await this.askGemini(question, ragContext);
+    return { answer, provider: "gemini", model };
   }
 
-  private async askGemini(question: string, ragContext: string) {
+  private async askGemini(
+    question: string,
+    ragContext: string,
+  ): Promise<{ answer: string; model: string }> {
     const apiKey = process.env.GEMINI_API_KEY;
-    const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const primaryModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
     const fallbackModels =
       process.env.GEMINI_FALLBACK_MODELS
         ?.split(",")
@@ -611,7 +743,7 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
           .join("")
           .trim() || "";
 
-      if (text) return text;
+      if (text) return { answer: text, model };
     }
 
     const hasCapacityIssue = errors.some(
