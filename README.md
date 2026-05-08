@@ -59,3 +59,33 @@ src/
 - `/orders` - CRUD de pedidos
 - `/delivery` - Gestión de entregas
 - `/reports` - Generación de reportes 
+
+## Docker
+
+### Levantar backend + postgres
+
+```bash
+docker compose up -d --build
+```
+
+La API queda disponible en:
+
+- `http://localhost:3000`
+- `http://localhost:3000/api/docs`
+
+### Detener contenedores
+
+```bash
+docker compose down
+```
+
+### Limpiar volúmenes (borra datos de postgres)
+
+```bash
+docker compose down -v
+```
+
+### Notas
+
+- En `docker-compose.yml` se usa una base de datos local (`postgres`) con `DB_SSL=false`.
+- Para entornos cloud (Neon/Supabase), usa `DB_SSL=true` en variables de entorno.
