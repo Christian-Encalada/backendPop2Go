@@ -31,6 +31,8 @@ export class AdminChatbotService {
     "cocina",
     "cliente",
     "clientes",
+    "usuario",
+    "usuarios",
     "ciudad",
     "ciudades",
     "local",
@@ -55,6 +57,16 @@ export class AdminChatbotService {
     "shopping",
     "mall",
     "paseo",
+    "bebida",
+    "bebidas",
+    "gaseosa",
+    "refresco",
+    "menu",
+    "menú",
+    "catalogo",
+    "catálogo",
+    "item",
+    "items",
   ];
 
   constructor(private readonly dataSource: DataSource) {}
@@ -81,7 +93,7 @@ export class AdminChatbotService {
     if (!hasBusinessIntent) {
       return {
         answer:
-          "Solo puedo responder sobre la operacion de Pop2Go (pedidos, ventas, productos, stock, repartidores, ciudades y flujo del negocio). Reformula tu pregunta dentro de ese alcance.",
+          "Solo puedo responder sobre la operacion de Pop2Go (pedidos, ventas, productos, stock, repartidores, usuarios, ciudades y flujo del negocio). Reformula tu pregunta dentro de ese alcance.",
         restricted: true,
         meta: { used: "filter" as const, model: null },
       };
@@ -143,7 +155,38 @@ export class AdminChatbotService {
 
     // Saludos
     if (/^(hola|buenas|buenos dias|buenas tardes|buenas noches)\b/.test(q)) {
-      return "Hola. Puedo ayudarte con pedidos, ventas, productos, stock y repartidores. Ejemplos: “¿Cuánto vendimos hoy?”, “Top 5 productos más vendidos”, “Stock bajo”.";
+      return "Hola. Puedo ayudarte con pedidos, ventas, productos, stock, repartidores, usuarios y catalogo (por ejemplo bebidas). Ejemplos: “¿Cuánto vendimos hoy?”, “Top 5 productos más vendidos”, “¿Cuántos usuarios tengo?”, “¿Qué bebidas tengo?”.";
+    }
+
+    // Usuarios
+    if (
+      /cuantos usuarios|cuántos usuarios|usuarios tengo|total de usuarios|numero de usuarios|número de usuarios/.test(
+        q,
+      )
+    ) {
+      const rows = await this.getUsersStats(isSuperAdmin, userCityId);
+      const total = rows.reduce((sum: number, r: any) => sum + (r.total ?? 0), 0);
+      const admins =
+        rows
+          .filter((r: any) => ["admin", "superadmin"].includes(String(r.rol)))
+          .reduce((sum: number, r: any) => sum + (r.total ?? 0), 0) ?? 0;
+      const deliveries =
+        rows.find((r: any) => String(r.rol) === "repartidor")?.total ?? 0;
+      const clients = rows.find((r: any) => String(r.rol) === "cliente")?.total ?? 0;
+
+      return `Usuarios:\n- Total: ${total}\n- Clientes: ${clients}\n- Repartidores: ${deliveries}\n- Admin/Superadmin: ${admins}`;
+    }
+
+    // Catalogo de bebidas
+    if (/que bebidas|qué bebidas|bebidas tengo|catalogo de bebidas|catálogo de bebidas/.test(q)) {
+      const rows = await this.getProductsByCategoryKeyword(
+        "bebid",
+        isSuperAdmin,
+        userCityId,
+      );
+      if (!rows?.length) return "No encontré bebidas activas en este momento.";
+      const lines = rows.map((r: any) => `- ${r.nombre}`);
+      return `Bebidas disponibles:\n${lines.join("\n")}`;
     }
 
     // Top productos
@@ -527,6 +570,59 @@ LowStockProducts=${JSON.stringify(lowStockProducts)}
       ${cityClause}
       GROUP BY u.delivery_status
       ORDER BY total DESC
+    `;
+
+    return this.dataSource.query(query, params);
+  }
+
+  private async getUsersStats(isSuperAdmin: boolean, userCityId?: number) {
+    const params: Array<number> = [];
+    const cityClause = isSuperAdmin
+      ? ""
+      : ` AND u.id_ciudad = $${params.push(userCityId ?? 0)} `;
+
+    const query = `
+      SELECT
+        COALESCE(r.nombre, 'sin_rol') AS rol,
+        COUNT(DISTINCT u.id_usuario)::int AS total
+      FROM tbl_usuarios u
+      LEFT JOIN tbl_usuario_roles ur ON ur.id_usuario = u.id_usuario
+      LEFT JOIN tbl_roles r ON r.id_rol = ur.id_rol
+      WHERE 1=1
+      ${cityClause}
+      GROUP BY COALESCE(r.nombre, 'sin_rol')
+      ORDER BY total DESC
+    `;
+
+    return this.dataSource.query(query, params);
+  }
+
+  private async getProductsByCategoryKeyword(
+    categoryKeyword: string,
+    isSuperAdmin: boolean,
+    userCityId?: number,
+  ) {
+    const params: Array<string | number> = [];
+    const categoryClause = ` AND LOWER(COALESCE(c.nombre, '')) LIKE LOWER($${params.push(
+      `%${categoryKeyword}%`,
+    )}) `;
+    const cityClause = isSuperAdmin
+      ? ""
+      : ` AND s.id_ciudad = $${params.push(userCityId ?? 0)} `;
+
+    const query = `
+      SELECT DISTINCT
+        p.nombre
+      FROM tbl_productos p
+      LEFT JOIN tbl_categorias c ON c.id_categoria = p.id_categoria
+      INNER JOIN tbl_stock_local sl ON sl.id_producto = p.id_producto
+      INNER JOIN tbl_locales s ON s.id_local = sl.id_local
+      WHERE p.activo = true
+        AND sl.activo = true
+      ${categoryClause}
+      ${cityClause}
+      ORDER BY p.nombre ASC
+      LIMIT 20
     `;
 
     return this.dataSource.query(query, params);
