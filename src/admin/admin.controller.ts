@@ -11,13 +11,16 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { AdminService } from "./admin.service";
+import { AdminChatbotService } from "./admin-chatbot.service";
 import { UsersService } from '../users/users.service';
+import { AdminChatDto } from "./dto/admin-chat.dto";
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiBody,
 } from "@nestjs/swagger";
 
 /**
@@ -30,6 +33,7 @@ import {
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
+    private readonly adminChatbotService: AdminChatbotService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -238,5 +242,29 @@ export class AdminController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   async deleteUser(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.usersService.remove(id, req.user.roles, req.user.cityId);
+  }
+
+  @Post("chatbot/ask")
+  @Roles("admin", "superadmin")
+  @ApiOperation({
+    summary:
+      "Consultar al asistente RAG de administracion (solo logica de negocio)",
+  })
+  @ApiBody({ type: AdminChatDto })
+  @ApiResponse({
+    status: 200,
+    description: "Respuesta del asistente de administracion",
+  })
+  @ApiResponse({ status: 401, description: "No autorizado" })
+  @ApiResponse({
+    status: 403,
+    description: "Prohibido - No tiene permisos suficientes",
+  })
+  async askChatbot(@Body() body: AdminChatDto, @Request() req) {
+    return this.adminChatbotService.ask(
+      body.question,
+      req.user.roles || [],
+      req.user.cityId,
+    );
   }
 }
