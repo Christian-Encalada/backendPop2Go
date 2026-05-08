@@ -7,6 +7,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { City } from "./entities/city.entity";
 import { CreateCityDto } from "./dto/create-city.dto";
+import { UpdateCityDto } from "./dto/update-city.dto";
 
 /**
  * Servicio para la gestión de ciudades
@@ -36,7 +37,10 @@ export class CitiesService {
       );
     }
 
-    const newCity = this.cityRepository.create(createCityDto);
+    const newCity = this.cityRepository.create({
+      nombre: createCityDto.nombre,
+      activo: createCityDto.activo ?? true,
+    });
     return this.cityRepository.save(newCity);
   }
 
@@ -88,11 +92,11 @@ export class CitiesService {
    * @param updateCityDto Datos actualizados de la ciudad
    * @returns La ciudad actualizada
    */
-  async update(id: number, updateCityDto: CreateCityDto): Promise<City> {
+  async update(id: number, updateCityDto: UpdateCityDto): Promise<City> {
     const city = await this.findOne(id);
 
     // Verificar si ya existe otra ciudad con el mismo nombre
-    if (updateCityDto.nombre !== city.nombre) {
+    if (updateCityDto.nombre && updateCityDto.nombre !== city.nombre) {
       const existingCity = await this.cityRepository.findOne({
         where: { nombre: updateCityDto.nombre },
       });
@@ -105,7 +109,8 @@ export class CitiesService {
     }
 
     // Actualizar los campos
-    Object.assign(city, updateCityDto);
+    if (updateCityDto.nombre !== undefined) city.nombre = updateCityDto.nombre;
+    if (updateCityDto.activo !== undefined) city.activo = updateCityDto.activo;
 
     return this.cityRepository.save(city);
   }

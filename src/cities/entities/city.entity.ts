@@ -13,6 +13,9 @@ export class City {
   @Column({ length: 100, unique: true })
   nombre: string;
 
+  @Column({ type: "boolean", default: true })
+  activo: boolean;
+
   // Relaciones
   @OneToMany(() => User, (user) => user.city)
   users: User[];

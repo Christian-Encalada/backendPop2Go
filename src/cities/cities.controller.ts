@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { CitiesService } from "./cities.service";
 import { CreateCityDto } from "./dto/create-city.dto";
+import { UpdateCityDto } from "./dto/update-city.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -102,7 +103,7 @@ export class CitiesController {
   })
   update(
     @Param("id", ParseIntPipe) id: number,
-    @Body() updateCityDto: CreateCityDto,
+    @Body() updateCityDto: UpdateCityDto,
   ) {
     return this.citiesService.update(id, updateCityDto);
   }
